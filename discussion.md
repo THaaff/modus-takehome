@@ -377,3 +377,17 @@ Dispersion flag    = dispersion > 0.5
 
 **Verification status**: `make check` passes — `ruff check`, `ruff format --check`, `mypy --strict` (with `pydantic.mypy` plugin), and `pytest` (22 tests) all green. Phase 0 contracts are locked.
 
+### Phase 1 (methods + engine + reports)
+
+**Three parallel streams off Phase 0**: Stream A (Comps + MockCompsProvider + fixture), Stream B (LastRound + MockMarketIndexProvider + fixture), Stream C (DCF + Triangulator + report writers). Each landed as its own PR (#2, #3, #4) with trivial `__init__.py` re-export rebases between merges. Final test count: 100, all green.
+
+**Why nearest-prior date lookup for the index** (vs. linear interpolation): the fixture is monthly NASDAQ closes — interpolating a daily level *between* monthly anchors implies more precision than the data carries. Nearest-prior is the standard backstop in market-data providers when the requested date isn't a trading day, and it's defensibly conservative (returns a known close, never a synthetic value). The choice is emitted as an explicit `Assumption` ("Index lookup strategy: nearest-prior date") so an auditor reviewing the artifact sees it. Linear interpolation would be a one-line swap if a customer asked for it.
+
+**Why ±22.5% midpoint for DCF range** (hardcoded, range = `[point × 0.775, point × 1.225]`): pure placeholder. The right answer is T15's 3×3 sensitivity grid (discount_rate ± 1pp × terminal_growth ± 0.5pp, 9 DCFs, take min/max as range, midpoint as point). The placeholder is emitted verbatim as an `Assumption` ("Range factor: ±22.5% (placeholder for T15 sensitivity grid)") so it can't be silently shipped. Talking point: "the range is *intentionally* a known-bad shortcut; the assumption tells the auditor exactly that."
+
+**`is_applicable` queries the provider** (CompsMethod especially): `is_applicable` checks `len(provider.get_comps(sector)) >= 1`, and LastRoundMethod's checks index coverage of both dates. This means a method's applicability can depend on data, not just request shape. The alternative — let `value()` throw mid-flight — would have made the Triangulator's "filter to applicable" contract a lie. Cost is one extra provider hit per applicability check, which is fine for an in-memory mock. For a real-API provider you'd add a thin cache or shift to a "try-and-fall-back" pattern in the Triangulator.
+
+**Equal-weight fallback when all confidences are zero**: signalled implicitly via `MethodWeight.raw_confidence=0` paired with non-zero `normalized_weight=1/n` and `overridden=False`. We considered injecting a synthetic note onto the first `MethodResult`, but that would mutate per-method outputs to communicate an engine-level fallback — wrong layer. Documented in the Triangulator module docstring instead. Should be rare in practice (at least one method usually returns positive confidence on real inputs).
+
+**T9 fixtures (`examples/inputs/*.json`)**: four request shapes — `comps_only`, `last_round_only`, `dcf_only`, `full`. The `full.json` example deliberately produces a dispersion of ~2.5 (flag=True) — methods disagree because a SaaS company at $500M revenue lands very differently under public-multiple comps vs. a 2023 round adjusted by NASDAQ vs. DCF on its projected EBITDA path. That's a feature, not a bug: it's the demo of "the system surfaces method disagreement to the auditor instead of smoothing it away."
+

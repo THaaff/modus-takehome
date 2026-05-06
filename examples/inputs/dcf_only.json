@@ -1,0 +1,17 @@
+{
+  "company": {
+    "name": "Meridian Industrial Holdings",
+    "sector": null
+  },
+  "projections": [
+    {"year": 1, "revenue": "150.0", "ebitda": "28.0", "capex": "8.0", "change_in_nwc": "2.0"},
+    {"year": 2, "revenue": "168.0", "ebitda": "33.0", "capex": "9.0", "change_in_nwc": "2.5"},
+    {"year": 3, "revenue": "186.0", "ebitda": "38.0", "capex": "9.5", "change_in_nwc": "2.5"},
+    {"year": 4, "revenue": "204.0", "ebitda": "44.0", "capex": "10.0", "change_in_nwc": "3.0"},
+    {"year": 5, "revenue": "222.0", "ebitda": "50.0", "capex": "10.5", "change_in_nwc": "3.0"}
+  ],
+  "discount_rate": "0.11",
+  "terminal_growth_rate": "0.025",
+  "tax_rate": "0.21",
+  "as_of_date": "2026-03-31"
+}
