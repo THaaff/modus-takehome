@@ -356,4 +356,24 @@ Dispersion flag    = dispersion > 0.5
 
 *(Use this section to jot anything that comes up during implementation — surprising design choices, things you want to research more, questions for the team.)*
 
-- 
+### Phase 0 (scaffold + models + contracts)
+
+**Tooling deltas from `PLAN.md`** (resolved up-front with the user):
+- `uv` instead of `pip + venv`. Single fast binary, deterministic lockfile via `uv.lock`, `uv sync` handles project + dev deps in one shot. No effect on output, only dev-loop speed and reproducibility.
+- `ruff` for both lint **and** format. The plan literally said "ruff/black"; ruff's formatter matches Black's style at ~50× the speed, so one tool replaces two with no style change. Config lives entirely in `pyproject.toml`.
+- Python `>=3.12` target (gets PEP 695 type aliases and `@override`). `.python-version` pinned to `3.13` to use the locally available interpreter and skip a download — `requires-python = ">=3.12"` keeps the project portable.
+
+**Talking point:** "I made conservative tooling deltas from the plan. Both are strictly faster on the dev loop and neither changes correctness or output. Documented up-front so they're defensible."
+
+**Decimal JSON serialization — `DecimalStr`**: every money field in `models/types.py` is `Annotated[Decimal, PlainSerializer(str, when_used="json")]`. Pydantic v2's default emits `Decimal` as a JSON *number*, which silently downgrades to float on parse and can lose precision. Forcing JSON to a string preserves exact value through round-trips. This is verified by `test_decimal_precision_survives_json_roundtrip` (15-digit precision survives) and `test_decimal_serialized_as_string_in_json`.
+
+**Talking point:** "Tiny choice that prevents an entire class of finance-domain bugs. Anyone who does `model_dump_json()` and re-parses gets the exact same Decimal back, byte-for-byte."
+
+**Frozen models for value types**: `PortfolioCompany`, `Assumption`, `Citation`, `FinancialProjection`, and `Comp` are `frozen=True`. They're immutable inputs — accidentally mutating them post-construction is always a bug. Mutable result types (`MethodResult`, `TriangulatedValuation`) are not frozen because they may be assembled incrementally in the Triangulator (T7).
+
+**`@runtime_checkable` on the Protocols**: lets tests confirm structural conformance via `isinstance(obj, CompsProvider)` cheaply. Doesn't constrain real implementations — Protocol still doesn't require inheritance.
+
+**Boundary discipline — no model-layer "must satisfy at least one method" guard**: deliberately *not* added at the request model. `PLAN.md` §5.5 puts that in the Triangulator (`NoApplicableMethodError`). Putting it on the model would mean the model knows about methods, breaking layering. Talking point on layering: "models know nothing about methods; methods declare applicability; the engine raises the named error."
+
+**Verification status**: `make check` passes — `ruff check`, `ruff format --check`, `mypy --strict` (with `pydantic.mypy` plugin), and `pytest` (22 tests) all green. Phase 0 contracts are locked.
+
