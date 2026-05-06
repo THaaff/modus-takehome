@@ -1,0 +1,30 @@
+{
+  "as_of": "2025-12-31",
+  "source_id": "mock_universe_v1",
+  "comps": [
+    {"ticker": "CRM",  "sector": "SaaS",        "revenue": "34850.00",  "ebitda": "9430.00",  "enterprise_value": "295000.00"},
+    {"ticker": "NOW",  "sector": "SaaS",        "revenue": "10980.00",  "ebitda": "3120.00",  "enterprise_value": "215000.00"},
+    {"ticker": "WDAY", "sector": "SaaS",        "revenue":  "7650.00",  "ebitda": "1890.00",  "enterprise_value": "85000.00"},
+    {"ticker": "DDOG", "sector": "SaaS",        "revenue":  "2680.00",  "ebitda":  "560.00",  "enterprise_value": "42000.00"},
+
+    {"ticker": "V",    "sector": "FinTech",     "revenue": "34900.00",  "ebitda": "23800.00", "enterprise_value": "510000.00"},
+    {"ticker": "MA",   "sector": "FinTech",     "revenue": "26500.00",  "ebitda": "16100.00", "enterprise_value": "420000.00"},
+    {"ticker": "PYPL", "sector": "FinTech",     "revenue": "31500.00",  "ebitda":  "5800.00", "enterprise_value": "75000.00"},
+    {"ticker": "SQ",   "sector": "FinTech",     "revenue": "23800.00",  "ebitda":   "950.00", "enterprise_value": "44000.00"},
+
+    {"ticker": "NKE",  "sector": "Consumer",    "revenue": "51400.00",  "ebitda": "7600.00",  "enterprise_value": "150000.00"},
+    {"ticker": "SBUX", "sector": "Consumer",    "revenue": "36500.00",  "ebitda": "7100.00",  "enterprise_value": "120000.00"},
+    {"ticker": "LULU", "sector": "Consumer",    "revenue":  "9900.00",  "ebitda": "2650.00",  "enterprise_value": "45000.00"},
+    {"ticker": "EL",   "sector": "Consumer",    "revenue": "15800.00",  "ebitda":  null,      "enterprise_value": "32000.00"},
+
+    {"ticker": "JNJ",  "sector": "Healthcare",  "revenue": "85200.00",  "ebitda": "27300.00", "enterprise_value": "390000.00"},
+    {"ticker": "UNH",  "sector": "Healthcare",  "revenue": "371000.00", "ebitda": "37200.00", "enterprise_value": "490000.00"},
+    {"ticker": "ABBV", "sector": "Healthcare",  "revenue": "55400.00",  "ebitda": "20100.00", "enterprise_value": "320000.00"},
+    {"ticker": "VEEV", "sector": "Healthcare",  "revenue":  "2480.00",  "ebitda":  "740.00",  "enterprise_value": "32000.00"},
+
+    {"ticker": "GE",   "sector": "Industrials", "revenue": "67900.00",  "ebitda": "9200.00",  "enterprise_value": "190000.00"},
+    {"ticker": "CAT",  "sector": "Industrials", "revenue": "67100.00",  "ebitda": "16800.00", "enterprise_value": "215000.00"},
+    {"ticker": "DE",   "sector": "Industrials", "revenue": "55600.00",  "ebitda": "13400.00", "enterprise_value": "180000.00"},
+    {"ticker": "ETN",  "sector": "Industrials", "revenue": "24100.00",  "ebitda":  null,      "enterprise_value": "135000.00"}
+  ]
+}
