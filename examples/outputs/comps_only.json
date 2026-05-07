@@ -1,0 +1,79 @@
+{
+  "company": {
+    "name": "Northwind FinTech Inc.",
+    "sector": "FinTech"
+  },
+  "as_of_date": "2026-03-31",
+  "point_estimate": "1278.26",
+  "range_low": "549.72",
+  "range_high": "2072.92",
+  "dispersion": "1.1916",
+  "dispersion_flag": true,
+  "outlier_method_names": [],
+  "method_results": [
+    {
+      "method_name": "comps",
+      "point_estimate": "1278.26",
+      "low": "549.72",
+      "high": "2072.92",
+      "confidence": "0.5000",
+      "assumptions": [
+        {
+          "name": "Multiples used",
+          "value": "EV/Revenue and EV/EBITDA",
+          "rationale": "EV/Revenue applied whenever target revenue and >=1 peer revenue are present; EV/EBITDA additionally applied when target EBITDA and >=2 peers' EBITDA are positive."
+        },
+        {
+          "name": "EV/Revenue median multiple",
+          "value": "8.50x",
+          "rationale": "Median across sector peers; 25/75 percentile drives low/high."
+        },
+        {
+          "name": "EV/EBITDA median multiple",
+          "value": "23.76x",
+          "rationale": "Median across sector peers with positive EBITDA."
+        },
+        {
+          "name": "Peer count",
+          "value": "4",
+          "rationale": "Number of sector-matched peers found in the comps universe; drives confidence via min(1, n/8)."
+        }
+      ],
+      "citations": [
+        {
+          "source": "CompsProvider:mock_universe_v1",
+          "description": "Peer set: MA, PYPL, SQ, V (sector=FinTech, n=4)",
+          "retrieved_at": "2026-05-07T04:52:54.469701Z",
+          "url": null
+        }
+      ],
+      "notes": null
+    }
+  ],
+  "weights": [
+    {
+      "method_name": "comps",
+      "raw_confidence": "0.5000",
+      "normalized_weight": "1.0000",
+      "overridden": false
+    }
+  ],
+  "request": {
+    "company": {
+      "name": "Northwind FinTech Inc.",
+      "sector": "FinTech"
+    },
+    "revenue": "210.0",
+    "ebitda": "32.5",
+    "last_post_money_valuation": null,
+    "last_round_date": null,
+    "reference_index": "NASDAQ",
+    "projections": null,
+    "discount_rate": null,
+    "terminal_growth_rate": null,
+    "tax_rate": "0.21",
+    "method_weights": null,
+    "as_of_date": "2026-03-31"
+  },
+  "generated_at": "2026-05-07T04:52:54.469847Z"
+}
