@@ -38,67 +38,57 @@ def _render_load_example() -> tuple[ValuationRequest | None, str | None]:
 
 
 def _render_form() -> tuple[ValuationRequest | None, str | None]:
-    with st.form("valuation_form"):
-        with st.expander("Company", expanded=True):
-            company_name = st.text_input("Name", value="Atlas Cloud Inc.")
-            company_sector = st.text_input("Sector", value="SaaS")
+    with st.expander("Company", expanded=True):
+        company_name = st.text_input("Name", value="Atlas Cloud Inc.")
+        company_sector = st.text_input("Sector", value="SaaS")
 
-        with st.expander("Comps inputs"):
-            revenue = st.number_input("Revenue ($M)", value=500.0, step=10.0, format="%.2f")
-            ebitda = st.number_input("EBITDA ($M)", value=75.0, step=5.0, format="%.2f")
+    with st.expander("Comps inputs"):
+        revenue = st.number_input("Revenue ($M)", value=500.0, step=10.0, format="%.2f")
+        ebitda = st.number_input("EBITDA ($M)", value=75.0, step=5.0, format="%.2f")
 
-        with st.expander("Last round inputs"):
-            last_post_money_valuation = st.number_input(
-                "Last post-money valuation ($M)", value=4500.0, step=100.0, format="%.2f"
-            )
-            last_round_date = st.date_input("Last round date", value=date(2023, 9, 29))
-            reference_index = st.text_input("Reference index", value="NASDAQ")
+    with st.expander("Last round inputs"):
+        last_post_money_valuation = st.number_input(
+            "Last post-money valuation ($M)", value=4500.0, step=100.0, format="%.2f"
+        )
+        last_round_date = st.date_input("Last round date", value=date(2023, 9, 29))
+        reference_index = st.text_input("Reference index", value="NASDAQ")
 
-        with st.expander("DCF inputs"):
-            default_projections = [
-                {
-                    "year": y,
-                    "revenue": rev,
-                    "ebitda": eb,
-                    "capex": capex,
-                    "change_in_nwc": nwc,
-                }
-                for y, rev, eb, capex, nwc in [
-                    (1, 600.0, 100.0, 30.0, 10.0),
-                    (2, 720.0, 130.0, 35.0, 12.0),
-                    (3, 850.0, 160.0, 40.0, 14.0),
-                    (4, 970.0, 185.0, 45.0, 15.0),
-                    (5, 1080.0, 210.0, 50.0, 16.0),
-                ]
+    with st.expander("DCF inputs"):
+        default_projections = [
+            {
+                "year": y,
+                "revenue": rev,
+                "ebitda": eb,
+                "capex": capex,
+                "change_in_nwc": nwc,
+            }
+            for y, rev, eb, capex, nwc in [
+                (1, 600.0, 100.0, 30.0, 10.0),
+                (2, 720.0, 130.0, 35.0, 12.0),
+                (3, 850.0, 160.0, 40.0, 14.0),
+                (4, 970.0, 185.0, 45.0, 15.0),
+                (5, 1080.0, 210.0, 50.0, 16.0),
             ]
-            projections_table = st.data_editor(
-                default_projections, num_rows="dynamic", key="projections_editor"
-            )
-            discount_rate = st.number_input(
-                "Discount rate", min_value=0.0, max_value=0.99, value=0.12, step=0.01
-            )
-            terminal_growth_rate = st.number_input(
-                "Terminal growth rate", min_value=0.0, max_value=0.99, value=0.03, step=0.005
-            )
-            tax_rate = st.number_input(
-                "Tax rate", min_value=0.0, max_value=0.99, value=0.21, step=0.01
-            )
+        ]
+        projections_table = st.data_editor(
+            default_projections, num_rows="dynamic", key="projections_editor"
+        )
+        discount_rate = st.number_input(
+            "Discount rate", min_value=0.0, max_value=0.99, value=0.12, step=0.01
+        )
+        terminal_growth_rate = st.number_input(
+            "Terminal growth rate", min_value=0.0, max_value=0.99, value=0.03, step=0.005
+        )
+        tax_rate = st.number_input("Tax rate", min_value=0.0, max_value=0.99, value=0.21, step=0.01)
 
-        with st.expander("Auditor controls"):
-            as_of_date = st.date_input("As-of date", value=date.today())
-            default_weights = [
-                {"method": "comps", "weight": None},
-                {"method": "dcf", "weight": None},
-                {"method": "last_round", "weight": None},
-            ]
-            weights_table = st.data_editor(
-                default_weights, num_rows="dynamic", key="weights_editor"
-            )
-
-        submitted = st.form_submit_button("Build request")
-
-    if not submitted:
-        return None, None
+    with st.expander("Auditor controls"):
+        as_of_date = st.date_input("As-of date", value=date.today())
+        default_weights = [
+            {"method": "comps", "weight": None},
+            {"method": "dcf", "weight": None},
+            {"method": "last_round", "weight": None},
+        ]
+        weights_table = st.data_editor(default_weights, num_rows="dynamic", key="weights_editor")
 
     weights = {
         row["method"]: row["weight"]
@@ -138,7 +128,7 @@ def _render_paste_json() -> tuple[ValuationRequest | None, str | None]:
         indent=2,
     )
     text = st.text_area("Request JSON", value=placeholder, height=300)
-    if not st.button("Validate"):
+    if not text.strip():
         return None, None
     try:
         return ValuationRequest.model_validate_json(text), None

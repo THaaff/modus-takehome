@@ -96,3 +96,86 @@ def test_run_returns_valuation_and_markdown() -> None:
     assert valuation.point_estimate > Decimal(0)
     assert request.company.name in markdown_text
     assert markdown_text.startswith("# VC Audit Report")
+
+
+# ---------- Page integration (skips when streamlit isn't installed) ----------
+
+APP_PATH = str(PROJECT_ROOT / "src" / "vc_audit" / "ui" / "app.py")
+
+
+def _app_test() -> object:
+    """Return a freshly initialized AppTest instance, or skip if streamlit is missing.
+
+    Lives outside the test functions so the import-skip happens once per test rather
+    than at module import time (which would skip every test in this file).
+    """
+    testing = pytest.importorskip(
+        "streamlit.testing.v1", reason="streamlit (the ui extra) not installed"
+    )
+    return testing.AppTest.from_file(APP_PATH, default_timeout=30).run()
+
+
+def test_form_mode_with_defaults_runs_cleanly() -> None:
+    """Regression: clicking Run with Form-mode defaults should produce a markdown
+    report. Previously the form-submit/Run two-step pattern dropped the request on
+    the second rerun and surfaced a non-descriptive 'No valid request to run' error.
+    """
+    at = _app_test()
+    at.radio[0].set_value("Form").run()  # type: ignore[attr-defined]
+    run_btn = next(b for b in at.button if b.label == "Run")  # type: ignore[attr-defined]
+    assert not run_btn.disabled, "Run should be enabled when defaults are valid"
+    run_btn.click().run()
+    assert not at.error, [e.value for e in at.error]  # type: ignore[attr-defined]
+    assert any(
+        "VC Audit Report" in m.value
+        for m in at.markdown  # type: ignore[attr-defined]
+    )
+
+
+def test_form_mode_invalid_input_surfaces_descriptive_error() -> None:
+    """Regression: setting discount_rate to 0 (model requires gt=0) should produce a
+    visible Pydantic error mentioning the field, and disable the Run button.
+    """
+    at = _app_test()
+    at.radio[0].set_value("Form").run()  # type: ignore[attr-defined]
+    discount = next(
+        n
+        for n in at.number_input  # type: ignore[attr-defined]
+        if n.label == "Discount rate"
+    )
+    discount.set_value(0.0).run()
+    run_btn = next(b for b in at.button if b.label == "Run")  # type: ignore[attr-defined]
+    assert run_btn.disabled, "Run should be disabled when validation fails"
+    error_text = " ".join(
+        e.value
+        for e in at.error  # type: ignore[attr-defined]
+    )
+    assert "discount_rate" in error_text
+    assert "greater than 0" in error_text
+
+
+def test_paste_json_mode_with_placeholder_runs_cleanly() -> None:
+    """The default placeholder JSON is a valid minimal request — Run should succeed."""
+    at = _app_test()
+    at.radio[0].set_value("Paste JSON").run()  # type: ignore[attr-defined]
+    run_btn = next(b for b in at.button if b.label == "Run")  # type: ignore[attr-defined]
+    assert not run_btn.disabled
+    run_btn.click().run()
+    assert not at.error, [e.value for e in at.error]  # type: ignore[attr-defined]
+    assert any(
+        "VC Audit Report" in m.value
+        for m in at.markdown  # type: ignore[attr-defined]
+    )
+
+
+def test_load_example_mode_runs_cleanly() -> None:
+    """Initial mode is Load example; Run should produce a report immediately."""
+    at = _app_test()
+    run_btn = next(b for b in at.button if b.label == "Run")  # type: ignore[attr-defined]
+    assert not run_btn.disabled
+    run_btn.click().run()
+    assert not at.error, [e.value for e in at.error]  # type: ignore[attr-defined]
+    assert any(
+        "VC Audit Report" in m.value
+        for m in at.markdown  # type: ignore[attr-defined]
+    )
