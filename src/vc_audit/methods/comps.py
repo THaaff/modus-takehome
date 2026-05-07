@@ -12,6 +12,7 @@ from typing import ClassVar
 
 from vc_audit.data.comps_provider import Comp, CompsProvider
 from vc_audit.methods.base import ValuationMethod
+from vc_audit.methods.descriptor import MethodDescriptor
 from vc_audit.models import (
     Assumption,
     Citation,
@@ -50,6 +51,19 @@ class CompsMethod(ValuationMethod):
     """Median EV/Revenue (and EV/EBITDA when available) against a sector peer set."""
 
     name: ClassVar[str] = "comps"
+    description: ClassVar[str] = (
+        "Sector-peer median EV/Revenue (and EV/EBITDA when available) applied to the "
+        "target's revenue and EBITDA."
+    )
+    required_inputs: ClassVar[tuple[str, ...]] = ("company.sector", "revenue")
+
+    @classmethod
+    def describe(cls) -> MethodDescriptor:
+        return MethodDescriptor(
+            name=cls.name,
+            description=cls.description,
+            required_inputs=list(cls.required_inputs),
+        )
 
     def __init__(self, comps_provider: CompsProvider) -> None:
         # Stored as the structural Protocol; concrete type is irrelevant past this point.

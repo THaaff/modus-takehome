@@ -15,6 +15,7 @@ from decimal import Decimal
 from typing import ClassVar
 
 from vc_audit.methods.base import ValuationMethod
+from vc_audit.methods.descriptor import MethodDescriptor
 from vc_audit.models import (
     Assumption,
     Citation,
@@ -42,6 +43,23 @@ class DCFMethod(ValuationMethod):
     """
 
     name: ClassVar[str] = "dcf"
+    description: ClassVar[str] = (
+        "Discounted cash flow on the supplied projections, plus a Gordon-growth "
+        "terminal value discounted back to the as-of date."
+    )
+    required_inputs: ClassVar[tuple[str, ...]] = (
+        "projections",
+        "discount_rate",
+        "terminal_growth_rate",
+    )
+
+    @classmethod
+    def describe(cls) -> MethodDescriptor:
+        return MethodDescriptor(
+            name=cls.name,
+            description=cls.description,
+            required_inputs=list(cls.required_inputs),
+        )
 
     def is_applicable(self, request: ValuationRequest) -> bool:
         if request.projections is None or len(request.projections) < 2:
