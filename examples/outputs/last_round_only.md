@@ -1,14 +1,14 @@
 # VC Audit Report — Halcyon Robotics
 
 **As-of date:** 2026-03-31
-**Generated:** 2026-05-07T04:52:55.217086+00:00
+**Generated:** 2026-05-07T21:30:21.863534+00:00
 
 ## Headline
 
 _Money values are in $M (millions of US dollars). Confidence and weights are in [0, 1]. Dispersion is a unitless ratio._
 
-- **Point estimate:** $317.25M
-- **Range:** $269.66M – $364.84M
+- **Valuation point estimate:** $317.25M
+- **Valuation range:** $269.66M – $364.84M
 - **Dispersion:** 0.3000 (within tolerance)
 
 ## Method breakdown
@@ -26,7 +26,15 @@ _Money values are in $M (millions of US dollars). Confidence and weights are in 
 - **Age decay:** 641 days; confidence = max(0, 1 - age/730) — Last-round signal degrades as the round becomes stale; zero confidence at 2 years.
 
 **Citations:**
-- MarketIndexProvider:mock_nasdaq_v1 — NASDAQ 17732.60 on 2024-06-28 -> 17580.12 on 2026-03-31 (retrieved 2026-05-07T04:52:55.216950+00:00)
+_Upstream data sources this method drew from. Format: `Source: identifier — description (retrieved timestamp)`._
+- **MarketIndexProvider:** mock_nasdaq_v1 — NASDAQ 17732.60 on 2024-06-28 -> 17580.12 on 2026-03-31 (retrieved 2026-05-07T21:30:21.863365+00:00)
+
+## Skipped methods
+
+_Registered methods that did not run for this request, and why. Useful for explaining why the triangulated estimate is leaning on a subset._
+
+- **comps:** Company sector is missing — comps requires a sector to match peers.
+- **dcf:** DCF requires at least 2 years of financial projections.
 
 ## Request (echoed)
 

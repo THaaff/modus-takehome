@@ -43,11 +43,21 @@
         {
           "source": "CompsProvider:mock_universe_v1",
           "description": "Peer set: MA, PYPL, SQ, V (sector=FinTech, n=4)",
-          "retrieved_at": "2026-05-07T04:52:54.469701Z",
+          "retrieved_at": "2026-05-07T21:30:20.962087Z",
           "url": null
         }
       ],
       "notes": null
+    }
+  ],
+  "skipped_methods": [
+    {
+      "method_name": "last_round",
+      "reason": "Last post-money valuation is missing — last_round needs a prior round price."
+    },
+    {
+      "method_name": "dcf",
+      "reason": "DCF requires at least 2 years of financial projections."
     }
   ],
   "weights": [
@@ -75,5 +85,5 @@
     "method_weights": null,
     "as_of_date": "2026-03-31"
   },
-  "generated_at": "2026-05-07T04:52:54.469847Z"
+  "generated_at": "2026-05-07T21:30:20.962234Z"
 }

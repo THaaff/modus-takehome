@@ -26,6 +26,7 @@ from vc_audit.methods import NoApplicableMethodError, ValuationMethod
 from vc_audit.models import (
     MethodResult,
     MethodWeight,
+    SkippedMethod,
     TriangulatedValuation,
     ValuationRequest,
 )
@@ -38,7 +39,18 @@ class Triangulator:
         self._methods = list(methods)
 
     def value(self, request: ValuationRequest) -> TriangulatedValuation:
-        applicable = [m for m in self._methods if m.is_applicable(request)]
+        applicable: list[ValuationMethod] = []
+        skipped: list[SkippedMethod] = []
+        for method in self._methods:
+            if method.is_applicable(request):
+                applicable.append(method)
+            else:
+                skipped.append(
+                    SkippedMethod(
+                        method_name=method.name,
+                        reason=method.inapplicability_reason(request),
+                    )
+                )
         if not applicable:
             raise NoApplicableMethodError(
                 f"No registered method applies to request for company={request.company.name!r}"
@@ -68,6 +80,7 @@ class Triangulator:
             dispersion_flag=dispersion_flag,
             outlier_method_names=outlier_method_names,
             method_results=results,
+            skipped_methods=skipped,
             weights=weights,
             request=request,
             generated_at=datetime.now(UTC),

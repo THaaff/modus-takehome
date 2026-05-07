@@ -138,6 +138,23 @@ class DCFMethod(ValuationMethod):
         # Gordon stability — also avoids division by zero/negative on (r - g).
         return request.terminal_growth_rate < request.discount_rate
 
+    def inapplicability_reason(self, request: ValuationRequest) -> str:
+        if request.projections is None or len(request.projections) < 2:
+            return "DCF requires at least 2 years of financial projections."
+        if request.discount_rate is None:
+            return "Discount rate is missing — DCF needs an auditor-supplied discount rate."
+        if request.terminal_growth_rate is None:
+            return (
+                "Terminal growth rate is missing — DCF needs an auditor-supplied "
+                "terminal growth rate."
+            )
+        if request.terminal_growth_rate >= request.discount_rate:
+            return (
+                "Gordon-growth instability: terminal growth rate must be strictly "
+                "less than the discount rate."
+            )
+        return super().inapplicability_reason(request)
+
     def value(self, request: ValuationRequest) -> MethodResult:
         # Caller is responsible for is_applicable; assert the invariants we relied on.
         assert request.projections is not None

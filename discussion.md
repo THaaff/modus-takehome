@@ -215,7 +215,9 @@ An auditor's signature on a report has personal liability attached. They cannot 
 
 ### Why multiple methods (the ASC 820 angle)
 
-ASC 820 paragraph 820-10-35-24A: *"...multiple valuation techniques shall be used to measure fair value when relevant observable inputs can be obtained for more than one technique..."*
+ASC 820 paragraph 820-10-35-24B: *"In some cases, a single valuation technique will be appropriate... [but] when there is no quoted price in an active market, it is sometimes appropriate for an entity to use multiple valuation techniques..."* and the entity is *"required to evaluate the results (or respective indications of fair value) of all techniques and weigh them, as appropriate."*
+
+(See README "Sources & references" for the codification link. Verified verbatim via Deloitte DART, May 2026. **Note:** earlier drafts of this document cited paragraph 24A — that's the wrong paragraph (24A is about the *objective* of valuation techniques and the three approaches; 24B is the one about multiple techniques). 24B is the correct cite and is also stronger — it explicitly endorses *weighting* the techniques, which is what the triangulator does.)
 
 This is the formal grounding for triangulation. Mention this almost verbatim if you can — shows you actually read the standard, not just intuited the right approach.
 

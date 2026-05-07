@@ -69,6 +69,24 @@ class LastRoundMethod(ValuationMethod):
             return False
         return self._index_can_price(request.reference_index, request.as_of_date)
 
+    def inapplicability_reason(self, request: ValuationRequest) -> str:
+        if request.last_post_money_valuation is None:
+            return "Last post-money valuation is missing — last_round needs a prior round price."
+        if request.last_round_date is None:
+            return "Last round date is missing — last_round needs the date of the prior round."
+        index = request.reference_index
+        if not self._index_can_price(index, request.last_round_date):
+            return (
+                f"Reference index {index!r} has no price coverage for the last round "
+                f"date {request.last_round_date.isoformat()}."
+            )
+        if not self._index_can_price(index, request.as_of_date):
+            return (
+                f"Reference index {index!r} has no price coverage for the as-of date "
+                f"{request.as_of_date.isoformat()}."
+            )
+        return super().inapplicability_reason(request)
+
     def _index_can_price(self, index: str, on: date) -> bool:
         """Return True iff the underlying provider has a price on or before `on`."""
         try:

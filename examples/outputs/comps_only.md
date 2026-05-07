@@ -1,15 +1,15 @@
 # VC Audit Report — Northwind FinTech Inc.
 
 **As-of date:** 2026-03-31
-**Generated:** 2026-05-07T04:52:54.551015+00:00
+**Generated:** 2026-05-07T21:30:21.049379+00:00
 **Sector:** FinTech
 
 ## Headline
 
 _Money values are in $M (millions of US dollars). Confidence and weights are in [0, 1]. Dispersion is a unitless ratio._
 
-- **Point estimate:** $1,278.26M
-- **Range:** $549.72M – $2,072.92M
+- **Valuation point estimate:** $1,278.26M
+- **Valuation range:** $549.72M – $2,072.92M
 - **Dispersion:** 1.1916 (FLAG)
 
 ## Method breakdown
@@ -27,7 +27,15 @@ _Money values are in $M (millions of US dollars). Confidence and weights are in 
 - **Peer count:** 4 — Number of sector-matched peers found in the comps universe; drives confidence via min(1, n/8).
 
 **Citations:**
-- CompsProvider:mock_universe_v1 — Peer set: MA, PYPL, SQ, V (sector=FinTech, n=4) (retrieved 2026-05-07T04:52:54.550870+00:00)
+_Upstream data sources this method drew from. Format: `Source: identifier — description (retrieved timestamp)`._
+- **CompsProvider:** mock_universe_v1 — Peer set: MA, PYPL, SQ, V (sector=FinTech, n=4) (retrieved 2026-05-07T21:30:21.049228+00:00)
+
+## Skipped methods
+
+_Registered methods that did not run for this request, and why. Useful for explaining why the triangulated estimate is leaning on a subset._
+
+- **last_round:** Last post-money valuation is missing — last_round needs a prior round price.
+- **dcf:** DCF requires at least 2 years of financial projections.
 
 ## Request (echoed)
 

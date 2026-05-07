@@ -43,11 +43,21 @@
         {
           "source": "MarketIndexProvider:mock_nasdaq_v1",
           "description": "NASDAQ 17732.60 on 2024-06-28 -> 17580.12 on 2026-03-31",
-          "retrieved_at": "2026-05-07T04:52:55.128505Z",
+          "retrieved_at": "2026-05-07T21:30:21.766243Z",
           "url": null
         }
       ],
       "notes": null
+    }
+  ],
+  "skipped_methods": [
+    {
+      "method_name": "comps",
+      "reason": "Company sector is missing — comps requires a sector to match peers."
+    },
+    {
+      "method_name": "dcf",
+      "reason": "DCF requires at least 2 years of financial projections."
     }
   ],
   "weights": [
@@ -75,5 +85,5 @@
     "method_weights": null,
     "as_of_date": "2026-03-31"
   },
-  "generated_at": "2026-05-07T04:52:55.128661Z"
+  "generated_at": "2026-05-07T21:30:21.766427Z"
 }

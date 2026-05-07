@@ -88,7 +88,25 @@ def _render_form() -> tuple[ValuationRequest | None, str | None]:
             {"method": "dcf", "weight": None},
             {"method": "last_round", "weight": None},
         ]
-        weights_table = st.data_editor(default_weights, num_rows="dynamic", key="weights_editor")
+        weights_table = st.data_editor(
+            default_weights,
+            num_rows="dynamic",
+            key="weights_editor",
+            column_config={
+                "method": st.column_config.TextColumn(
+                    "method",
+                    help="Method name to override (comps, dcf, last_round).",
+                ),
+                "weight": st.column_config.NumberColumn(
+                    "weight",
+                    help="Override weight in [0, 1]. Leave blank to keep auto weighting.",
+                    min_value=0.0,
+                    max_value=1.0,
+                    step=0.05,
+                    format="%.4f",
+                ),
+            },
+        )
 
     weights = {
         row["method"]: row["weight"]
@@ -115,6 +133,8 @@ def _render_form() -> tuple[ValuationRequest | None, str | None]:
         return form_to_request(form_state), None
     except ValidationError as e:
         return None, f"Validation error: {e}"
+    except ValueError as e:
+        return None, f"Form input error: {e}"
 
 
 def _render_paste_json() -> tuple[ValuationRequest | None, str | None]:
@@ -185,6 +205,9 @@ if st.button("Run", type="primary", disabled=request is None):
         except ValueError as e:
             st.error(f"Engine error: {e}")
         else:
-            st.markdown(markdown_text)
+            # Streamlit's markdown renders `$...$` as KaTeX inline math, which
+            # silently mangles paired currency values like `$48.71M – $2,072.50M`
+            # into half-large math text. Escape to render dollars literally.
+            st.markdown(markdown_text.replace("$", r"\$"))
             with st.expander("Raw JSON artifact"):
                 st.json(json.loads(to_json_str(valuation)))

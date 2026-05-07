@@ -81,6 +81,17 @@ class CompsMethod(ValuationMethod):
         peers = self._provider.get_comps(sector)
         return len(peers) >= 1
 
+    def inapplicability_reason(self, request: ValuationRequest) -> str:
+        sector = request.company.sector
+        if sector is None:
+            return "Company sector is missing — comps requires a sector to match peers."
+        if request.revenue is None:
+            return "Target revenue is missing — comps applies an EV/Revenue multiple."
+        peers = self._provider.get_comps(sector)
+        if not peers:
+            return f"No peers found in the comps universe for sector {sector!r}."
+        return super().inapplicability_reason(request)
+
     # ------------------------------------------------------------------ valuation
 
     def value(self, request: ValuationRequest) -> MethodResult:

@@ -10,6 +10,7 @@ from vc_audit.models import (
     MethodResult,
     MethodWeight,
     PortfolioCompany,
+    SkippedMethod,
     TriangulatedValuation,
     ValuationRequest,
 )
@@ -24,6 +25,7 @@ def _make_valuation(
     dispersion: Decimal = Decimal("0.588"),
     dispersion_flag: bool = True,
     outlier_method_names: list[str] | None = None,
+    skipped_methods: list[SkippedMethod] | None = None,
 ) -> TriangulatedValuation:
     # All money values are in $M (millions of US dollars), per project convention.
     request = ValuationRequest(
@@ -94,6 +96,7 @@ def _make_valuation(
         dispersion_flag=dispersion_flag,
         outlier_method_names=outlier_method_names or [],
         method_results=method_results,
+        skipped_methods=skipped_methods or [],
         weights=weights,
         request=request,
         generated_at=datetime(2026, 5, 6, 12, 0, 0, tzinfo=UTC),
@@ -188,6 +191,25 @@ def test_markdown_omits_outlier_line_when_empty() -> None:
     valuation = _make_valuation(outlier_method_names=[])
     md = to_markdown_str(valuation)
     assert "Outlier methods:" not in md
+
+
+def test_markdown_renders_skipped_methods_section() -> None:
+    valuation = _make_valuation(
+        skipped_methods=[
+            SkippedMethod(method_name="dcf", reason="No projections supplied."),
+            SkippedMethod(method_name="last_round", reason="No prior round."),
+        ]
+    )
+    md = to_markdown_str(valuation)
+    assert "## Skipped methods" in md
+    assert "**dcf:** No projections supplied." in md
+    assert "**last_round:** No prior round." in md
+
+
+def test_markdown_omits_skipped_methods_section_when_none() -> None:
+    valuation = _make_valuation(skipped_methods=[])
+    md = to_markdown_str(valuation)
+    assert "## Skipped methods" not in md
 
 
 def test_markdown_table_has_outlier_column() -> None:
