@@ -1,4 +1,4 @@
-.PHONY: install lint format format-check typecheck test check clean dev
+.PHONY: install lint format format-check typecheck test check clean dev ui
 
 install:
 	uv sync
@@ -25,3 +25,6 @@ clean:
 
 dev:
 	uv run uvicorn vc_audit.api.server:app --reload
+
+ui:
+	uv run --extra ui streamlit run src/vc_audit/ui/app.py
