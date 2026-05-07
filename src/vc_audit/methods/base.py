@@ -20,6 +20,16 @@ class ValuationMethod(ABC):
     def is_applicable(self, request: ValuationRequest) -> bool:
         """Return True iff `request` carries the inputs this method needs."""
 
+    def inapplicability_reason(self, request: ValuationRequest) -> str:
+        """Human-readable reason this method was skipped for `request`.
+
+        Only meaningful when `is_applicable(request)` is False; the Triangulator
+        records this on each skipped method so auditors can see at a glance why
+        a method dropped out. Subclasses should override with specifics — the
+        default here is a generic fallback.
+        """
+        return "Method not applicable to this request."
+
     @abstractmethod
     def value(self, request: ValuationRequest) -> MethodResult:
         """Run the method and return a self-describing result.

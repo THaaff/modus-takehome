@@ -37,6 +37,18 @@ class MethodResult(BaseModel):
     notes: str | None = None
 
 
+class SkippedMethod(BaseModel):
+    """A registered method that was *not* run for this request, plus the reason.
+
+    Surfaced so auditors can see at a glance why the triangulated estimate is
+    leaning on a subset of methods — e.g., DCF skipped because no projections
+    were provided. The reason string is intended for humans, not machine parsing.
+    """
+
+    method_name: str
+    reason: str
+
+
 class MethodWeight(BaseModel):
     """How much one method contributed to the final point estimate."""
 
@@ -86,6 +98,13 @@ class TriangulatedValuation(BaseModel):
         ),
     )
     method_results: list[MethodResult]
+    skipped_methods: list[SkippedMethod] = Field(
+        default_factory=list,
+        description=(
+            "Registered methods that were not applicable to this request. Each entry "
+            "names the method and the human-readable reason (e.g., missing inputs)."
+        ),
+    )
     weights: list[MethodWeight]
     request: ValuationRequest  # echoed for full audit trail
     generated_at: datetime

@@ -136,6 +136,26 @@ def test_applicable_on_valid_request() -> None:
     assert DCFMethod().is_applicable(req) is True
 
 
+def test_inapplicability_reasons_are_specific() -> None:
+    method = DCFMethod()
+
+    no_proj = _make_request(projections=None)
+    assert "projections" in method.inapplicability_reason(no_proj).lower()
+
+    no_rate = _make_request(
+        projections=[_proj(1, Decimal("100")), _proj(2, Decimal("110"))],
+        discount_rate=None,
+    )
+    assert "discount rate" in method.inapplicability_reason(no_rate).lower()
+
+    unstable = _make_request(
+        projections=[_proj(1, Decimal("100")), _proj(2, Decimal("110"))],
+        discount_rate=Decimal("0.04"),
+        terminal_growth_rate=Decimal("0.05"),
+    )
+    assert "gordon" in method.inapplicability_reason(unstable).lower()
+
+
 # ---------- Numeric correctness ----------
 
 

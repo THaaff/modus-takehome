@@ -40,6 +40,9 @@ def _fake_method_class(
         def is_applicable(self, request: ValuationRequest) -> bool:
             return applicable
 
+        def inapplicability_reason(self, request: ValuationRequest) -> str:
+            return f"fake reason for {name_}"
+
         def value(self, request: ValuationRequest) -> MethodResult:
             return MethodResult(
                 method_name=self.name,
@@ -288,6 +291,24 @@ def test_inapplicable_methods_are_filtered_out() -> None:
     method_names = {r.method_name for r in valuation.method_results}
     assert method_names == {"include_me"}
     assert valuation.point_estimate == Decimal("100")
+
+
+def test_skipped_methods_recorded_with_reason() -> None:
+    """Inapplicable methods should land in `skipped_methods` with the method's
+    own `inapplicability_reason` — not silently dropped."""
+    methods = [
+        _fake("skip_me", applicable=False),
+        _fake("include_me", applicable=True),
+    ]
+    valuation = Triangulator(methods).value(_request())
+    assert [s.method_name for s in valuation.skipped_methods] == ["skip_me"]
+    assert valuation.skipped_methods[0].reason == "fake reason for skip_me"
+
+
+def test_skipped_methods_empty_when_all_applicable() -> None:
+    methods = [_fake("a"), _fake("b")]
+    valuation = Triangulator(methods).value(_request())
+    assert valuation.skipped_methods == []
 
 
 # ---------- Generated_at present ----------

@@ -53,11 +53,21 @@
         {
           "source": "ValuationRequest:projections",
           "description": "DCF on 5 projection years; discount=0.11, terminal_growth=0.025, tax=0.21",
-          "retrieved_at": "2026-05-07T04:52:54.633594Z",
+          "retrieved_at": "2026-05-07T21:30:21.142399Z",
           "url": null
         }
       ],
       "notes": "3x3 sensitivity grid (discount_rate +/- 1pp x terminal_growth +/- 0.5pp) over 5 projection years; range = min/max across 9 valid cells, point = midpoint."
+    }
+  ],
+  "skipped_methods": [
+    {
+      "method_name": "comps",
+      "reason": "Company sector is missing — comps requires a sector to match peers."
+    },
+    {
+      "method_name": "last_round",
+      "reason": "Last post-money valuation is missing — last_round needs a prior round price."
     }
   ],
   "weights": [
@@ -121,5 +131,5 @@
     "method_weights": null,
     "as_of_date": "2026-03-31"
   },
-  "generated_at": "2026-05-07T04:52:54.633738Z"
+  "generated_at": "2026-05-07T21:30:21.142562Z"
 }

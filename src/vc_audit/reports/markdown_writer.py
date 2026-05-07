@@ -20,6 +20,7 @@ from vc_audit.models import (
     Citation,
     MethodResult,
     MethodWeight,
+    SkippedMethod,
     TriangulatedValuation,
 )
 
@@ -37,9 +38,10 @@ def to_markdown_str(valuation: TriangulatedValuation) -> str:
         _header(valuation),
         _headline(valuation),
         _method_breakdown(valuation),
+        _skipped_methods(valuation),
         _request_appendix(valuation),
     ]
-    return "\n\n".join(parts) + "\n"
+    return "\n\n".join(p for p in parts if p) + "\n"
 
 
 # ---------- Section renderers ----------
@@ -65,8 +67,11 @@ def _headline(valuation: TriangulatedValuation) -> str:
         "_Money values are in $M (millions of US dollars). "
         "Confidence and weights are in [0, 1]. Dispersion is a unitless ratio._",
         "",
-        f"- **Point estimate:** {_currency(valuation.point_estimate)}",
-        f"- **Range:** {_currency(valuation.range_low)} – {_currency(valuation.range_high)}",
+        f"- **Valuation point estimate:** {_currency(valuation.point_estimate)}",
+        (
+            f"- **Valuation range:** {_currency(valuation.range_low)} – "
+            f"{_currency(valuation.range_high)}"
+        ),
         f"- **Dispersion:** {_ratio(valuation.dispersion)} {flag}",
     ]
     if valuation.outlier_method_names:
@@ -123,6 +128,10 @@ def _method_detail(result: MethodResult) -> str:
         lines.append("- (none)")
     lines.append("")
     lines.append("**Citations:**")
+    lines.append(
+        "_Upstream data sources this method drew from. "
+        "Format: `Source: identifier — description (retrieved timestamp)`._"
+    )
     if result.citations:
         lines.extend(_citation_line(c) for c in result.citations)
     else:
@@ -136,7 +145,32 @@ def _assumption_line(a: Assumption) -> str:
 
 def _citation_line(c: Citation) -> str:
     url = f" ({c.url})" if c.url else ""
-    return f"- {c.source} — {c.description} (retrieved {c.retrieved_at.isoformat()}){url}"
+    namespace, _, identifier = c.source.partition(":")
+    rendered_source = f"**{namespace}:** {identifier}" if identifier else f"**{namespace}**"
+    return f"- {rendered_source} — {c.description} (retrieved {c.retrieved_at.isoformat()}){url}"
+
+
+def _skipped_methods(valuation: TriangulatedValuation) -> str:
+    """Render the list of methods that didn't run, with the reason for each.
+
+    Returns "" when nothing was skipped so the section is omitted entirely from
+    the report rather than showing an empty heading.
+    """
+    if not valuation.skipped_methods:
+        return ""
+    lines = [
+        "## Skipped methods",
+        "",
+        "_Registered methods that did not run for this request, and why. "
+        "Useful for explaining why the triangulated estimate is leaning on a subset._",
+        "",
+    ]
+    lines.extend(_skipped_line(s) for s in valuation.skipped_methods)
+    return "\n".join(lines)
+
+
+def _skipped_line(s: SkippedMethod) -> str:
+    return f"- **{s.method_name}:** {s.reason}"
 
 
 def _request_appendix(valuation: TriangulatedValuation) -> str:

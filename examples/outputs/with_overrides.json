@@ -45,7 +45,7 @@
         {
           "source": "CompsProvider:mock_universe_v1",
           "description": "Peer set: CRM, DDOG, NOW, WDAY (sector=SaaS, n=4)",
-          "retrieved_at": "2026-05-07T04:52:55.301827Z",
+          "retrieved_at": "2026-05-07T21:30:21.957890Z",
           "url": null
         }
       ],
@@ -83,7 +83,7 @@
         {
           "source": "MarketIndexProvider:mock_nasdaq_v1",
           "description": "NASDAQ 13219.32 on 2023-09-29 -> 17580.12 on 2026-03-31",
-          "retrieved_at": "2026-05-07T04:52:55.301973Z",
+          "retrieved_at": "2026-05-07T21:30:21.958057Z",
           "url": null
         }
       ],
@@ -131,13 +131,14 @@
         {
           "source": "ValuationRequest:projections",
           "description": "DCF on 5 projection years; discount=0.12, terminal_growth=0.03, tax=0.21",
-          "retrieved_at": "2026-05-07T04:52:55.302027Z",
+          "retrieved_at": "2026-05-07T21:30:21.958111Z",
           "url": null
         }
       ],
       "notes": "3x3 sensitivity grid (discount_rate +/- 1pp x terminal_growth +/- 0.5pp) over 5 projection years; range = min/max across 9 valid cells, point = midpoint."
     }
   ],
+  "skipped_methods": [],
   "weights": [
     {
       "method_name": "comps",
@@ -215,5 +216,5 @@
     },
     "as_of_date": "2026-03-31"
   },
-  "generated_at": "2026-05-07T04:52:55.302046Z"
+  "generated_at": "2026-05-07T21:30:21.958132Z"
 }

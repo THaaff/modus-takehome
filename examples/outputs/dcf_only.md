@@ -1,14 +1,14 @@
 # VC Audit Report — Meridian Industrial Holdings
 
 **As-of date:** 2026-03-31
-**Generated:** 2026-05-07T04:52:54.714161+00:00
+**Generated:** 2026-05-07T21:30:21.230156+00:00
 
 ## Headline
 
 _Money values are in $M (millions of US dollars). Confidence and weights are in [0, 1]. Dispersion is a unitless ratio._
 
-- **Point estimate:** $259.74M
-- **Range:** $214.33M – $305.15M
+- **Valuation point estimate:** $259.74M
+- **Valuation range:** $214.33M – $305.15M
 - **Dispersion:** 0.3497 (within tolerance)
 
 ## Method breakdown
@@ -30,7 +30,15 @@ _3x3 sensitivity grid (discount_rate +/- 1pp x terminal_growth +/- 0.5pp) over 5
 - **Confidence formula:** min(1, 5/5) × completeness_ratio — Saturates at 5 projection years; completeness counts non-zero revenue/ebitda/capex across years (ΔNWC excluded — default is 0).
 
 **Citations:**
-- ValuationRequest:projections — DCF on 5 projection years; discount=0.11, terminal_growth=0.025, tax=0.21 (retrieved 2026-05-07T04:52:54.714026+00:00)
+_Upstream data sources this method drew from. Format: `Source: identifier — description (retrieved timestamp)`._
+- **ValuationRequest:** projections — DCF on 5 projection years; discount=0.11, terminal_growth=0.025, tax=0.21 (retrieved 2026-05-07T21:30:21.230007+00:00)
+
+## Skipped methods
+
+_Registered methods that did not run for this request, and why. Useful for explaining why the triangulated estimate is leaning on a subset._
+
+- **comps:** Company sector is missing — comps requires a sector to match peers.
+- **last_round:** Last post-money valuation is missing — last_round needs a prior round price.
 
 ## Request (echoed)
 

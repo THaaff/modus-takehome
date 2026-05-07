@@ -1,15 +1,15 @@
 # VC Audit Report — Lumina Analytics
 
 **As-of date:** 2026-03-31
-**Generated:** 2026-05-07T04:52:55.042805+00:00
+**Generated:** 2026-05-07T21:30:21.668328+00:00
 **Sector:** SaaS
 
 ## Headline
 
 _Money values are in $M (millions of US dollars). Confidence and weights are in [0, 1]. Dispersion is a unitless ratio._
 
-- **Point estimate:** $898.73M
-- **Range:** $246.36M – $1,191.25M
+- **Valuation point estimate:** $898.73M
+- **Valuation range:** $246.36M – $1,191.25M
 - **Dispersion:** 1.0514 (FLAG)
 - **Outlier methods:** last_round
 
@@ -30,7 +30,8 @@ _Money values are in $M (millions of US dollars). Confidence and weights are in 
 - **Peer count:** 4 — Number of sector-matched peers found in the comps universe; drives confidence via min(1, n/8).
 
 **Citations:**
-- CompsProvider:mock_universe_v1 — Peer set: CRM, DDOG, NOW, WDAY (sector=SaaS, n=4) (retrieved 2026-05-07T04:52:55.042542+00:00)
+_Upstream data sources this method drew from. Format: `Source: identifier — description (retrieved timestamp)`._
+- **CompsProvider:** mock_universe_v1 — Peer set: CRM, DDOG, NOW, WDAY (sector=SaaS, n=4) (retrieved 2026-05-07T21:30:21.668098+00:00)
 
 ### last_round
 
@@ -41,7 +42,8 @@ _Money values are in $M (millions of US dollars). Confidence and weights are in 
 - **Age decay:** 790 days; confidence = max(0, 1 - age/730) — Last-round signal degrades as the round becomes stale; zero confidence at 2 years.
 
 **Citations:**
-- MarketIndexProvider:mock_nasdaq_v1 — NASDAQ 15164.01 on 2024-01-31 -> 17580.12 on 2026-03-31 (retrieved 2026-05-07T04:52:55.042723+00:00)
+_Upstream data sources this method drew from. Format: `Source: identifier — description (retrieved timestamp)`._
+- **MarketIndexProvider:** mock_nasdaq_v1 — NASDAQ 15164.01 on 2024-01-31 -> 17580.12 on 2026-03-31 (retrieved 2026-05-07T21:30:21.668257+00:00)
 
 ### dcf
 
@@ -56,7 +58,8 @@ _3x3 sensitivity grid (discount_rate +/- 1pp x terminal_growth +/- 0.5pp) over 5
 - **Confidence formula:** min(1, 5/5) × completeness_ratio — Saturates at 5 projection years; completeness counts non-zero revenue/ebitda/capex across years (ΔNWC excluded — default is 0).
 
 **Citations:**
-- ValuationRequest:projections — DCF on 5 projection years; discount=0.10, terminal_growth=0.03, tax=0.21 (retrieved 2026-05-07T04:52:55.042783+00:00)
+_Upstream data sources this method drew from. Format: `Source: identifier — description (retrieved timestamp)`._
+- **ValuationRequest:** projections — DCF on 5 projection years; discount=0.10, terminal_growth=0.03, tax=0.21 (retrieved 2026-05-07T21:30:21.668311+00:00)
 
 ## Request (echoed)
 

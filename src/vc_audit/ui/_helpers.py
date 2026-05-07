@@ -7,7 +7,7 @@ optional `ui` extra (streamlit) isn't installed. Tests import from here directly
 
 from __future__ import annotations
 
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Any
 
@@ -96,7 +96,16 @@ def form_to_request(form_state: dict[str, Any]) -> ValuationRequest:
     for key, value in weights_raw.items():
         if not key or value is None:
             continue
-        weights[str(key)] = Decimal(str(value))
+        # Streamlit's data_editor can hand back strings (typed columns) or floats
+        # (number columns). Either way, skip blanks instead of crashing on
+        # `Decimal("")`. Pydantic surfaces a clean error if the value is bogus.
+        text = str(value).strip()
+        if not text:
+            continue
+        try:
+            weights[str(key)] = Decimal(text)
+        except InvalidOperation as e:
+            raise ValueError(f"Weight for {key!r} is not a number: {value!r}") from e
     if weights:
         payload["method_weights"] = weights
 

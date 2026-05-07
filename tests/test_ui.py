@@ -89,6 +89,50 @@ def test_form_to_request_round_trips_full_fixture() -> None:
     assert actual.model_dump() == expected.model_dump()
 
 
+def test_form_to_request_ignores_blank_weight_cells() -> None:
+    """`st.data_editor` returns "" for cleared cells and stringy floats for
+    text-typed columns; both should be tolerated. A row with just whitespace is
+    treated as "leave this method on auto weighting" rather than a parse error.
+    """
+    form_state: dict[str, object] = {
+        "company_name": "Demo Co",
+        "company_sector": None,
+        "revenue": 100.0,
+        "ebitda": 10.0,
+        "last_post_money_valuation": None,
+        "last_round_date": None,
+        "reference_index": None,
+        "projections": [],
+        "discount_rate": None,
+        "terminal_growth_rate": None,
+        "tax_rate": None,
+        "as_of_date": date(2026, 5, 7),
+        "method_weights": {"comps": ".6", "dcf": 0.4, "last_round": "  "},
+    }
+    request = form_to_request(form_state)
+    assert request.method_weights == {"comps": Decimal("0.6"), "dcf": Decimal("0.4")}
+
+
+def test_form_to_request_rejects_non_numeric_weight() -> None:
+    form_state: dict[str, object] = {
+        "company_name": "Demo Co",
+        "company_sector": None,
+        "revenue": 100.0,
+        "ebitda": 10.0,
+        "last_post_money_valuation": None,
+        "last_round_date": None,
+        "reference_index": None,
+        "projections": [],
+        "discount_rate": None,
+        "terminal_growth_rate": None,
+        "tax_rate": None,
+        "as_of_date": date(2026, 5, 7),
+        "method_weights": {"comps": "abc"},
+    }
+    with pytest.raises(ValueError, match="not a number"):
+        form_to_request(form_state)
+
+
 def test_run_returns_valuation_and_markdown() -> None:
     raw = FULL_FIXTURE.read_text(encoding="utf-8")
     request = ValuationRequest.model_validate_json(raw)

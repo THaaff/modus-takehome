@@ -1,8 +1,22 @@
 # VC Audit Tool
 
-A structured, auditable fair-value workflow for private VC portfolio companies. The tool runs three valuation methods behind a single strategy interface, **triangulates** them into a point estimate plus a min/max range and dispersion metric, and emits an artifact (JSON + Markdown) that traces every number back to its inputs, sources, and assumptions. Designed against the ASC 820 Level 3 framing where multiple unobservable inputs must be reconciled into a single fair-value estimate; ASC 820-10-35-24A explicitly endorses combining methods rather than picking one.
+**Thesis:** the interesting problem isn't picking *the* valuation method — it's reconciling several into a defensible point estimate. This tool runs the three textbook approaches (Comparable Company Analysis, Discounted Cash Flow, Last Round Market-Adjusted) behind a single strategy interface, then **triangulates** them into a confidence-weighted point, a min/max range, a dispersion flag, and per-method outlier detection. Output is a JSON + Markdown artifact that traces every number back to its inputs, sources, and assumptions.
 
-## Methodology
+The framing follows [ASC 820 Level 3 fair-value measurement][asc820-l3], which **explicitly endorses combining methods rather than picking one**: per [ASC 820-10-35-24B][asc820-24b], "in some cases a single valuation technique will be appropriate... [but] when there is no quoted price in an active market, it is sometimes appropriate for an entity to use multiple valuation techniques," and the entity is "required to evaluate the results... of all techniques and weigh them, as appropriate." That second clause is the formal grounding for the triangulator's confidence-weighted reconciliation. The three methods are deliberately the standard trio — they're the substrate for the interesting layer, which is the engine.
+
+## What the engine does
+
+The `Triangulator`:
+- asks each method `is_applicable(request)` so missing inputs don't kill the run,
+- normalizes per-method confidence into weights,
+- computes `point = Σ wᵢ × pointᵢ`, `range = (min(lowᵢ), max(highᵢ))`,
+- flags `dispersion = (high − low) / point > 0.5`,
+- names the **outlier** method (>2× or <0.5× the median across applicable methods),
+- accepts `request.method_weights` so auditor judgment is a typed, validated input — not a footnote.
+
+Confidence is per-method, derived from the data: DCF scales with horizon coverage × completeness; Last Round decays exponentially with round age (zero at 2 years); Comps scales with peer count. Auditors see *why* a method is weighted heavily.
+
+## The three methods
 
 | Method | Inputs | High-confidence when |
 |---|---|---|
@@ -10,33 +24,33 @@ A structured, auditable fair-value workflow for private VC portfolio companies. 
 | **DCF** | 1–5y projections, discount rate, terminal growth, tax rate | long horizon (≥3y), complete line items, `g < r` |
 | **Last Round** | last post-money valuation, round date, market index | recent round (<12 months); confidence decays after that |
 
-Each method emits a `MethodResult` with a point estimate, low/high range, confidence in [0, 1], and a list of citations + assumptions. The `Triangulator` normalizes confidences to weights, computes a confidence-weighted point estimate, takes elementwise min/max as the range, and flags dispersion `(high − low) / point > 0.5`. **Outlier detection** complements the aggregate flag: any method whose point estimate is >2× or <0.5× the median across applicable methods is named in the report headline (answers "*which* method disagrees?"). DCF reports its range using a 3×3 **sensitivity grid** over the two most consequential inputs (discount rate ± 1pp × terminal growth ± 0.5pp), with cells violating Gordon stability skipped and counted in the assumption rationale.
+DCF reports its range using a 3×3 **sensitivity grid** over the two most consequential inputs (discount rate ± 1pp × terminal growth ± 0.5pp); cells violating Gordon stability are skipped and counted in the assumption rationale.
 
 ## Architecture
 
 ```
 Presentation (CLI · FastAPI · Streamlit)
         │
-   Engine (Triangulator + per-method weights)
+   Engine (Triangulator + per-method weights + outlier detection)
         │
    Methods (Comps · DCF · LastRound)  ← strategy pattern, Protocol-based
         │
-   Data providers (Comps universe · Market index)  ← Mock impls; drop-in real ones
+   Data providers (Comps universe · Market index)  ← mock impls; drop-in real ones
         │
    Reports (JSON · Markdown)
 ```
-
-See `PLAN.md` §3 for the full diagram with data-providers and reports broken out.
 
 ## Quickstart
 
 ```bash
 make install                    # uv sync
-make check                      # ruff + format-check + mypy --strict + pytest (158 tests)
+make check                      # ruff + format-check + mypy --strict + pytest (169 tests)
 make dev                        # FastAPI on :8000 — see /docs for OpenAPI
 make ui                         # Streamlit demo on :8501 (uv sync --extra ui first)
 make examples                   # regenerate examples/outputs/ from examples/inputs/
 ```
+
+**Where to start as a reviewer:** open [`examples/outputs/full.md`](examples/outputs/full.md) for what the tool produces, then [`src/vc_audit/engine/triangulator.py`](src/vc_audit/engine/triangulator.py) for how.
 
 ## Using the tool
 
@@ -49,45 +63,52 @@ uv run vc-audit value -i examples/inputs/full.json --format both -o examples/out
 
 **API** — `POST /valuations` with a `ValuationRequest` JSON body; supports `?format=json|markdown|both`. `/methods` lists registered methods and their applicability rules; `/health` is a 200 ok. Live OpenAPI at `localhost:8000/docs`.
 
-**UI** — `make ui` opens a Streamlit page with three input modes (load a bundled fixture, fill out a structured form, or paste JSON). The page wires `build_default_triangulator()` in-process and renders the markdown report and raw JSON side-by-side.
+**UI** — `make ui` opens a Streamlit page with three input modes (load a bundled fixture, fill a structured form, or paste JSON). Renders the markdown report and raw JSON side-by-side.
 
-Canonical demo pair: [`examples/inputs/full.json`](examples/inputs/full.json) → [`examples/outputs/full.md`](examples/outputs/full.md).
+![Streamlit UI — load-example mode rendering examples/inputs/full.json](docs/screenshot.png)
 
-## Key design decisions and tradeoffs
+## Key design decisions
 
-- **Triangulation over single-method**: ASC 820 endorses it, and the dispersion metric flags exactly the cases where the auditor's judgment matters most. Picking the "best" method per company would surface less actionable disagreement.
-- **Confidence is a first-class output**, computed per-method (e.g., DCF's confidence scales with horizon coverage × completeness; Last Round's decays exponentially with round age). Auditors see *why* a method is weighted heavily, not a static priority list.
-- **Range = elementwise min/max, not a confidence-weighted envelope.** The weighted envelope hides the worst-case spread. Min/max + dispersion answers "what's the widest the methods disagree?" — auditors care about that distance, not a smoothed band.
-- **Outlier detection complements `dispersion_flag`** — the flag answers "is there disagreement?", the named methods answer "which method is the outlier?". Two lines of headline cost; both are decision-relevant.
-- **DCF range from a 3×3 sensitivity grid**, not a hardcoded ±N% factor. The grid reflects sensitivity to the two most consequential inputs; the ±N% placeholder told a confident-looking story disconnected from the actual model.
+- **Triangulation over single-method.** Codified in ASC 820-10-35-24B (see Sources). Dispersion + outlier flags surface exactly the cases that need auditor judgment.
+- **Range = elementwise min/max, not a weighted envelope.** Auditors care about the worst-case spread, not a smoothed band.
+- **Outlier detection complements `dispersion_flag`.** The flag answers "is there disagreement?"; the outlier list answers "*which* method?".
+- **DCF range from a 3×3 sensitivity grid**, not a hardcoded ±N% factor. The grid reflects sensitivity to the two most consequential inputs.
 - **`Decimal` everywhere** for money and rates. No float arithmetic touches a valuation number.
-- **Providers behind a `Protocol`**: `MockCompsProvider` and `MockMarketIndexProvider` ship with the repo. A real implementation drops into `build_default_triangulator()` without engine changes.
-- **Auditor weight overrides** (`request.method_weights`) are first-class. Auditor judgment isn't an afterthought — it's a typed, validated input echoed in the audit trail.
+- **Providers behind a `Protocol`.** Mock impls ship; real ones drop into `build_default_triangulator()` without engine changes.
+- **Auditor weight overrides** (`request.method_weights`) are first-class — typed, validated, echoed in the audit trail.
 
-## What I'd do next with more time
+## Sources & references
 
-- Real provider integrations (Yahoo Finance / FRED / a peer-comp data source) replacing the mocks.
+**Primary standards (US GAAP):**
+- [ASC 820-10-35-24B][asc820-24b] — endorses use of multiple valuation techniques when no quoted price exists in an active market, and requires the entity to weigh their results. *Verified verbatim via Deloitte DART codification, May 2026.*
+- [ASC 820 fair-value hierarchy (Level 1/2/3)][asc820-l3] — private portfolio companies fall under Level 3 (unobservable inputs); the framing for why audit traceability is the dominant non-functional requirement of this tool.
+
+**Industry guidance:**
+- [IPEV Valuation Guidelines (Dec 2025)][ipev] — the global VC/PE-specific standard, aligned with ASC 820 and IFRS 13. Recommended reading for context on Level 3 venture practice.
+- [AICPA *Accounting and Valuation Guide: Valuation of Privately-Held-Company Equity Securities Issued as Compensation*][aicpa-cheap-stock] — defines OPM Backsolve, PWERM, and Hybrid methods (cited under "What I'd do next").
+
+**Technical references:**
+- US 21% corporate tax rate (default in `ValuationRequest.tax_rate`): [Internal Revenue Code §11][irc-11] (post-TCJA 2017).
+- `Decimal` over `float` for monetary arithmetic: [IEEE 754][ieee754] / Goldberg, ["What Every Computer Scientist Should Know About Floating-Point Arithmetic"][goldberg-1991] (1991).
+- Gordon Growth Model (DCF terminal value, requires `g < r`): Gordon, M.J., ["Dividends, Earnings, and Stock Prices"][gordon-1959] (1959).
+
+## What I'd do next
+
+- Real provider integrations (Yahoo Finance / FRED / a peer-comp source) replacing the mocks.
+- **Calibration check** (ASC 820 concept): given a recent observable transaction, recalibrate model multiples to match — quantifies method bias.
+- **OPM Backsolve** as a fourth method for capital-structure-aware allocation across share classes.
 - Per-sector calibration of the dispersion threshold (currently a global 0.5 heuristic).
-- Content-addressed report store: hash the request + engine version → cache-immutable JSON output.
-- Peer-similarity scoring beyond exact-sector match (size buckets, growth-stage tags, geography).
-- Run history + scenario diffing: "what changed between the Q3 and Q4 valuations of this company?".
-- Property-based tests for the triangulator's invariants (range_low ≤ point ≤ range_high; weights sum to 1.0).
+- Content-addressed report store: hash request + engine version → cache-immutable output.
+- Run history + scenario diffing ("what changed between Q3 and Q4?").
+- Property-based tests for triangulator invariants (`range_low ≤ point ≤ range_high`; weights sum to 1.0).
 
-## Repo layout
+See `PLAN.md` for the full design rationale and `discussion.md` for per-decision notes.
 
-```
-src/vc_audit/        engine, methods, data providers, reports, CLI, API, UI
-  ├── engine/        Triangulator + factory
-  ├── methods/       CompsMethod, DCFMethod, LastRoundMethod (+ Protocol)
-  ├── data/          Mock providers behind Protocols
-  ├── reports/       JSON + Markdown writers
-  ├── api/           FastAPI server
-  ├── cli.py         Typer CLI entry point
-  └── ui/            Streamlit page (optional, gated by [project.optional-dependencies] ui)
-tests/               158 tests covering every module
-examples/inputs/     6 bundled fixtures (full, dcf-only, comps-only, last-round-only,
-                     high-dispersion, with-overrides)
-examples/outputs/    Rendered .json + .md per fixture (regenerable via `make examples`)
-PLAN.md              Phase-by-phase plan; §3 has the full architecture diagram
-discussion.md        Per-decision design notes (the "why" behind each tradeoff)
-```
+[asc820-l3]: https://viewpoint.pwc.com/dt/us/en/pwc/accounting_guides/fair_value_measureme/fair_value_measureme__9_US/chapter_1_introducti__1_US/15_key_concepts_in_a_US.html
+[asc820-24b]: https://dart.deloitte.com/USDART/home/codification/broad-transactions/asc820-10/roadmap-fair-value-measurements-disclosures/chapter-10-subsequent-measurement/10-3-valuation-techniques
+[ipev]: https://www.privateequityvaluation.com/Portals/0/Documents/Guidelines/2025%20IPEV%20Valuation%20Guidelines.pdf
+[aicpa-cheap-stock]: https://www.aicpa-cima.com/cpe-learning/publication/valuation-of-privately-held-company-equity-securities-issued-as-compensation-accounting-and-valuation-guide-OPL
+[irc-11]: https://www.law.cornell.edu/uscode/text/26/11
+[ieee754]: https://en.wikipedia.org/wiki/IEEE_754
+[goldberg-1991]: https://docs.oracle.com/cd/E19957-01/806-3568/ncg_goldberg.html
+[gordon-1959]: https://www.jstor.org/stable/1927792
