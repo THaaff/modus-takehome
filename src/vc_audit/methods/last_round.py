@@ -12,6 +12,7 @@ from typing import ClassVar
 
 from vc_audit.data.index_provider import MarketIndexProvider
 from vc_audit.methods.base import ValuationMethod
+from vc_audit.methods.descriptor import MethodDescriptor
 from vc_audit.models import (
     Assumption,
     Citation,
@@ -30,6 +31,23 @@ class LastRoundMethod(ValuationMethod):
     """Mark-to-market valuation anchored on the last priced round."""
 
     name: ClassVar[str] = "last_round"
+    description: ClassVar[str] = (
+        "Marks the last priced round to market using the reference index's return "
+        "between the round date and the as-of date; confidence decays over two years."
+    )
+    required_inputs: ClassVar[tuple[str, ...]] = (
+        "last_post_money_valuation",
+        "last_round_date",
+        "reference_index",
+    )
+
+    @classmethod
+    def describe(cls) -> MethodDescriptor:
+        return MethodDescriptor(
+            name=cls.name,
+            description=cls.description,
+            required_inputs=list(cls.required_inputs),
+        )
 
     def __init__(self, index_provider: MarketIndexProvider) -> None:
         self._index_provider = index_provider

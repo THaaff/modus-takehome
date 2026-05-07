@@ -391,3 +391,23 @@ Dispersion flag    = dispersion > 0.5
 
 **T9 fixtures (`examples/inputs/*.json`)**: four request shapes — `comps_only`, `last_round_only`, `dcf_only`, `full`. The `full.json` example deliberately produces a dispersion of ~2.5 (flag=True) — methods disagree because a SaaS company at $500M revenue lands very differently under public-multiple comps vs. a 2023 round adjusted by NASDAQ vs. DCF on its projected EBITDA path. That's a feature, not a bug: it's the demo of "the system surfaces method disagreement to the auditor instead of smoothing it away."
 
+### Phase 2 (API + CLI + integration tests)
+
+**Why `?format=json|markdown|both` instead of `/valuations/{id}/report`**: the service is stateless by design (§7), so there is no `id` to fetch later. Collapsing the report endpoint into a query param keeps a single entry point, lets the response Content-Type vary with the format (`application/json` vs. `text/markdown`), and avoids the wrapping tax for the common single-format case. The `both` mode pays a small envelope cost only when explicitly requested. The CLI's `--format` flag mirrors the API verbatim — same vocabulary across both surfaces.
+
+**Why CLI defaults to stdout, not files**: pipe-friendly by default (`vc-audit value -i in.json | jq .point_estimate`, `… --format markdown | less`). `--output-dir` is the explicit-artifact mode an auditor would use to file an audit trail. Treating disk as the opt-in keeps quick checks frictionless without sacrificing the artifact-on-demand workflow.
+
+**Method self-description (`describe()` classmethod)**: each strategy class owns its `name`, `description`, and `required_inputs`. `GET /methods` and `vc-audit methods` both call `default_method_descriptors()`, which calls `Method.describe()`. Consistent with the rest of the audit-trail design — every output knows what produced it. Adding a new method means adding three `ClassVar`s alongside the existing one; the API and CLI surfaces pick it up automatically through the factory.
+
+**`engine/factory.py` as the single composition root**: both `cli.py` and `api/server.py` import `build_default_triangulator()` from there. The API caches it under `functools.lru_cache` for warm restarts; the CLI re-creates it per invocation (cheap — mocks parse a small JSON fixture once). Tests can still construct alternative `Triangulator`s directly when they need different methods or providers; the factory is convenience, not a barrier.
+
+**TestClient (sync, httpx-backed) over async test patterns**: the API has no async work — handlers are sync, the engine is sync, providers are sync. A sync `TestClient` keeps test code linear and skips `pytest-asyncio`. Talking point: "async-by-default is a cargo-culted FastAPI pattern; we let the workload pick."
+
+**Parity test (`test_integration_parity.py`)**: drives `examples/inputs/full.json` through both the API and the CLI, parses both JSON outputs, strips run-time fields (`generated_at`, per-citation `retrieved_at`), and asserts deep equality on everything else. Catches any future drift if either presentation surface starts massaging the result. Talking point: "CLI and API are paper-thin wrappers over the same engine — for any input, the JSON artifact and the human-readable report are byte-identical between surfaces."
+
+**Click 8.2 deprecation gotcha**: `CliRunner(mix_stderr=False)` was removed in Click 8.2; stderr is now always captured separately. Tests use the no-arg constructor; `result.stderr` is independently asserted-on for error-path tests.
+
+**Bundled example resolution**: `vc-audit example` reads `examples/inputs/full.json` via a project-root-relative path resolved from `__file__`. Works for `uv run` and editable installs; a non-editable install would need package-data wiring (`importlib.resources`), which is out of scope for the take-home. The CLI fails loudly with an exit-2 + stderr message if the file is missing, rather than silently printing nothing.
+
+**Verification status**: `make check` passes (ruff + ruff format-check + mypy --strict + pytest). Test count went from 100 → 127 (+27): 11 API tests, 9 CLI tests, 1 parity test, with 3 of the API/CLI tests parameterized over all 4 fixture files. Live-server smoke tests (`/health`, `/methods`, `/valuations` × 3 formats, 422 paths) all green; CLI `--output-dir` mode writes both `.json` and `.md` for the full fixture.
+
