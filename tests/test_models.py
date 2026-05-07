@@ -218,3 +218,8 @@ def test_confidence_bounds() -> None:
 def test_dispersion_threshold_constant() -> None:
     """The threshold 0.5 is the documented heuristic — see discussion.md §5c."""
     assert TriangulatedValuation.dispersion_threshold() == Decimal("0.5")
+
+
+def test_triangulated_valuation_defaults_outlier_method_names_to_empty_list() -> None:
+    valuation = _make_triangulated()
+    assert valuation.outlier_method_names == []

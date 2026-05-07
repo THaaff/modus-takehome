@@ -78,6 +78,13 @@ class TriangulatedValuation(BaseModel):
         ),
     )
     dispersion_flag: bool
+    outlier_method_names: list[str] = Field(
+        default_factory=list,
+        description=(
+            "Method names whose point estimate is >2× or <0.5× the median across "
+            "applicable methods. Empty if fewer than 3 methods or no outliers."
+        ),
+    )
     method_results: list[MethodResult]
     weights: list[MethodWeight]
     request: ValuationRequest  # echoed for full audit trail
