@@ -411,3 +411,15 @@ Dispersion flag    = dispersion > 0.5
 
 **Verification status**: `make check` passes (ruff + ruff format-check + mypy --strict + pytest). Test count went from 100 → 127 (+27): 11 API tests, 9 CLI tests, 1 parity test, with 3 of the API/CLI tests parameterized over all 4 fixture files. Live-server smoke tests (`/health`, `/methods`, `/valuations` × 3 formats, 422 paths) all green; CLI `--output-dir` mode writes both `.json` and `.md` for the full fixture.
 
+### Phase 3 (T17 outlier detection)
+
+**Why keep `dispersion_flag` AND add outlier names**: they answer different questions. `dispersion_flag` is the aggregate "do the methods disagree?" signal — one boolean derived from `(high − low) / point`. `outlier_method_names` answers "where is the disagreement coming from?" by naming the specific method(s) whose point estimate sits >2× or <0.5× the median across applicable methods. The reviewer reads the headline once and knows both whether to drill in *and* where to drill in. Replacing one with the other would lose information; keeping both costs two lines of headline text.
+
+**Why `default_factory=list` is non-negotiable**: sibling Phase 3 PRs (T15 sensitivity grid, T16 Streamlit UI) construct `TriangulatedValuation` instances without knowing about this field. A required field would force them to rebase against breaking changes; a defaulted field lets them pick up the new column passively when they merge. The Pydantic-level `default_factory` (vs. a class-level `[]`) is a mutable-default nicety — every instance gets its own list rather than sharing one.
+
+**Why n<3 returns empty**: the median is meaningless with fewer than three samples. With n=1 the sole estimate trivially *is* the median, so it can never exceed itself. With n=2 the larger always exceeds 2× of `(a+b)/2` when `b > 3a`, which would flag the larger value in any "they disagree" pair — that's just a worse restatement of the dispersion flag. The 2× / 0.5× thresholds only carry information when there's a genuine middle to compare against. Returning `[]` instead of erroring keeps the engine happy on single-applicable-method runs (Comps-only, DCF-only).
+
+**Why method *names*, not richer structure**: the per-method block already carries the gory detail — point estimate, range, confidence, weight, overridden flag, assumptions, citations. The headline's job is to point a finger; a list of names is the terse audit-trail-friendly way to do that. A richer structure (deviation factor, direction, etc.) would duplicate information already three rows down in the per-method table. We chose terseness; the reader can compute "by how much" from the table.
+
+**Threshold choice (2× / 0.5×)**: symmetric in log-space (i.e., `multiplier > 2 or multiplier < 1/2`), which is the right family for ratio data — a method valuing the company at half the median is just as off as one valuing it at double, and a constant absolute-dollar threshold would be wrong as soon as the company size changes. Heuristic, like the 0.5 dispersion threshold; in a calibrated product these would come from historical reviewer-overrule data.
+
