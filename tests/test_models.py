@@ -19,25 +19,26 @@ from vc_audit.models import (
 
 
 def _make_request() -> ValuationRequest:
+    # All money values are in $M (millions of US dollars), per project convention.
     return ValuationRequest(
         company=PortfolioCompany(name="Basis AI", sector="SaaS"),
-        revenue=Decimal("12500000.50"),
-        ebitda=Decimal("2100000"),
-        last_post_money_valuation=Decimal("100000000"),
+        revenue=Decimal("12.50"),
+        ebitda=Decimal("2.10"),
+        last_post_money_valuation=Decimal("100"),
         last_round_date=date(2025, 6, 1),
         projections=[
             FinancialProjection(
                 year=1,
-                revenue=Decimal("15000000"),
-                ebitda=Decimal("2500000"),
-                capex=Decimal("500000"),
+                revenue=Decimal("15.0"),
+                ebitda=Decimal("2.5"),
+                capex=Decimal("0.5"),
             ),
             FinancialProjection(
                 year=2,
-                revenue=Decimal("20000000"),
-                ebitda=Decimal("3500000"),
-                capex=Decimal("700000"),
-                change_in_nwc=Decimal("250000"),
+                revenue=Decimal("20.0"),
+                ebitda=Decimal("3.5"),
+                capex=Decimal("0.7"),
+                change_in_nwc=Decimal("0.25"),
             ),
         ],
         discount_rate=Decimal("0.15"),
@@ -51,9 +52,9 @@ def _make_triangulated() -> TriangulatedValuation:
     method_results = [
         MethodResult(
             method_name="comps",
-            point_estimate=Decimal("85000000"),
-            low=Decimal("70000000"),
-            high=Decimal("100000000"),
+            point_estimate=Decimal("85"),
+            low=Decimal("70"),
+            high=Decimal("100"),
             confidence=Decimal("0.8"),
             assumptions=[Assumption(name="EV/Revenue", value="6.8x", rationale="Sector median.")],
             citations=[
@@ -68,9 +69,9 @@ def _make_triangulated() -> TriangulatedValuation:
     return TriangulatedValuation(
         company=request.company,
         as_of_date=request.as_of_date,
-        point_estimate=Decimal("85000000"),
-        range_low=Decimal("70000000"),
-        range_high=Decimal("100000000"),
+        point_estimate=Decimal("85"),
+        range_low=Decimal("70"),
+        range_high=Decimal("100"),
         dispersion=Decimal("0.353"),
         dispersion_flag=False,
         method_results=method_results,

@@ -31,6 +31,15 @@ _RANGE_HIGH_FACTOR = Decimal("1.225")
 _CONFIDENCE_SATURATION_YEARS = Decimal("5")
 
 
+def _format_rate(rate: Decimal) -> str:
+    """Render an annual rate (e.g., 0.12) as ``12.00%`` for assumption display.
+
+    The ``%`` suffix disambiguates from raw decimals; ``per annum`` is implicit in
+    the assumption name (Discount rate, Terminal growth rate, Tax rate).
+    """
+    return f"{(rate * 100).quantize(Decimal('0.01')):f}%"
+
+
 class DCFMethod(ValuationMethod):
     """Discounted Cash Flow valuation.
 
@@ -173,17 +182,17 @@ class DCFMethod(ValuationMethod):
         return [
             Assumption(
                 name="Discount rate",
-                value=str(request.discount_rate),
+                value=_format_rate(request.discount_rate),
                 rationale="Auditor-supplied WACC proxy.",
             ),
             Assumption(
                 name="Terminal growth rate",
-                value=str(request.terminal_growth_rate),
+                value=_format_rate(request.terminal_growth_rate),
                 rationale="Long-run nominal growth; must be < discount rate (Gordon stability).",
             ),
             Assumption(
                 name="Tax rate",
-                value=str(request.tax_rate),
+                value=_format_rate(request.tax_rate),
                 rationale=tax_rationale,
             ),
             Assumption(
