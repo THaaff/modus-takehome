@@ -59,38 +59,46 @@ def _header(valuation: TriangulatedValuation) -> str:
 
 def _headline(valuation: TriangulatedValuation) -> str:
     flag = "(FLAG)" if valuation.dispersion_flag else "(within tolerance)"
-    return "\n".join(
-        [
-            "## Headline",
-            "",
-            "_Money values are in $M (millions of US dollars). "
-            "Confidence and weights are in [0, 1]. Dispersion is a unitless ratio._",
-            "",
-            f"- **Point estimate:** {_currency(valuation.point_estimate)}",
-            f"- **Range:** {_currency(valuation.range_low)} – {_currency(valuation.range_high)}",
-            f"- **Dispersion:** {_ratio(valuation.dispersion)} {flag}",
-        ]
-    )
+    lines = [
+        "## Headline",
+        "",
+        "_Money values are in $M (millions of US dollars). "
+        "Confidence and weights are in [0, 1]. Dispersion is a unitless ratio._",
+        "",
+        f"- **Point estimate:** {_currency(valuation.point_estimate)}",
+        f"- **Range:** {_currency(valuation.range_low)} – {_currency(valuation.range_high)}",
+        f"- **Dispersion:** {_ratio(valuation.dispersion)} {flag}",
+    ]
+    if valuation.outlier_method_names:
+        lines.append(f"- **Outlier methods:** {', '.join(valuation.outlier_method_names)}")
+    return "\n".join(lines)
 
 
 def _method_breakdown(valuation: TriangulatedValuation) -> str:
     weights_by_name = {w.method_name: w for w in valuation.weights}
+    outlier_set = set(valuation.outlier_method_names)
+    header = (
+        "| Method | Point ($M) | Low ($M) | High ($M) "
+        "| Confidence | Weight | Overridden | Outlier |"
+    )
     table_lines = [
         "## Method breakdown",
         "",
-        "| Method | Point ($M) | Low ($M) | High ($M) | Confidence | Weight | Overridden |",
-        "|---|---|---|---|---|---|---|",
+        header,
+        "|---|---|---|---|---|---|---|---|",
     ]
     for result in valuation.method_results:
         weight = weights_by_name[result.method_name]
-        table_lines.append(_method_row(result, weight))
+        is_outlier = result.method_name in outlier_set
+        table_lines.append(_method_row(result, weight, is_outlier))
 
     detail_blocks = [_method_detail(r) for r in valuation.method_results]
     return "\n".join(table_lines) + "\n\n" + "\n\n".join(detail_blocks)
 
 
-def _method_row(result: MethodResult, weight: MethodWeight) -> str:
+def _method_row(result: MethodResult, weight: MethodWeight, is_outlier: bool) -> str:
     overridden = "yes" if weight.overridden else "no"
+    outlier = "yes" if is_outlier else ""
     return (
         f"| {result.method_name} "
         f"| {_currency(result.point_estimate)} "
@@ -98,7 +106,8 @@ def _method_row(result: MethodResult, weight: MethodWeight) -> str:
         f"| {_currency(result.high)} "
         f"| {_percent(result.confidence)} "
         f"| {_percent(weight.normalized_weight)} "
-        f"| {overridden} |"
+        f"| {overridden} "
+        f"| {outlier} |"
     )
 
 

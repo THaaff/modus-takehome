@@ -301,3 +301,65 @@ def test_generated_at_within_5_seconds_of_now() -> None:
     assert before <= valuation.generated_at <= after
     # Sanity: timezone-aware
     assert valuation.generated_at.tzinfo is not None
+
+
+# ---------- Per-method outlier detection ----------
+
+
+def test_no_outliers_when_fewer_than_three_methods() -> None:
+    methods = [
+        _fake("method_a", point=Decimal("100")),
+        _fake("method_b", point=Decimal("1000")),
+    ]
+    valuation = Triangulator(methods).value(_request())
+    assert valuation.outlier_method_names == []
+
+
+def test_outliers_above_2x_median_flagged() -> None:
+    methods = [
+        _fake("method_a", point=Decimal("100")),
+        _fake("method_b", point=Decimal("100")),
+        _fake("method_c", point=Decimal("250")),
+    ]
+    valuation = Triangulator(methods).value(_request())
+    assert valuation.outlier_method_names == ["method_c"]
+
+
+def test_outliers_below_half_median_flagged() -> None:
+    methods = [
+        _fake("method_a", point=Decimal("40")),
+        _fake("method_b", point=Decimal("100")),
+        _fake("method_c", point=Decimal("100")),
+    ]
+    valuation = Triangulator(methods).value(_request())
+    assert valuation.outlier_method_names == ["method_a"]
+
+
+def test_no_outliers_when_all_close() -> None:
+    methods = [
+        _fake("method_a", point=Decimal("95")),
+        _fake("method_b", point=Decimal("100")),
+        _fake("method_c", point=Decimal("105")),
+    ]
+    valuation = Triangulator(methods).value(_request())
+    assert valuation.outlier_method_names == []
+
+
+def test_zero_median_returns_empty_list() -> None:
+    methods = [
+        _fake("method_a", point=Decimal("0"), low=Decimal("0"), high=Decimal("0")),
+        _fake("method_b", point=Decimal("0"), low=Decimal("0"), high=Decimal("0")),
+        _fake("method_c", point=Decimal("0"), low=Decimal("0"), high=Decimal("0")),
+    ]
+    valuation = Triangulator(methods).value(_request())
+    assert valuation.outlier_method_names == []
+
+
+def test_outlier_method_names_preserves_input_order() -> None:
+    methods = [
+        _fake("A", point=Decimal("400")),
+        _fake("B", point=Decimal("100")),
+        _fake("C", point=Decimal("10")),
+    ]
+    valuation = Triangulator(methods).value(_request())
+    assert valuation.outlier_method_names == ["A", "C"]
