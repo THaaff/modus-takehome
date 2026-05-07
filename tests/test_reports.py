@@ -23,6 +23,7 @@ def _make_valuation(
     high: Decimal = Decimal("110"),
     dispersion: Decimal = Decimal("0.588"),
     dispersion_flag: bool = True,
+    outlier_method_names: list[str] | None = None,
 ) -> TriangulatedValuation:
     # All money values are in $M (millions of US dollars), per project convention.
     request = ValuationRequest(
@@ -91,6 +92,7 @@ def _make_valuation(
         range_high=high,
         dispersion=dispersion,
         dispersion_flag=dispersion_flag,
+        outlier_method_names=outlier_method_names or [],
         method_results=method_results,
         weights=weights,
         request=request,
@@ -174,3 +176,27 @@ def test_markdown_includes_request_appendix_with_company_name() -> None:
     assert "Basis AI" in md
     # And a fenced JSON block.
     assert "```json" in md
+
+
+def test_markdown_lists_outliers_in_headline() -> None:
+    valuation = _make_valuation(outlier_method_names=["dcf"])
+    md = to_markdown_str(valuation)
+    assert "**Outlier methods:** dcf" in md
+
+
+def test_markdown_omits_outlier_line_when_empty() -> None:
+    valuation = _make_valuation(outlier_method_names=[])
+    md = to_markdown_str(valuation)
+    assert "Outlier methods:" not in md
+
+
+def test_markdown_table_has_outlier_column() -> None:
+    valuation = _make_valuation(outlier_method_names=["dcf"])
+    md = to_markdown_str(valuation)
+    # Header carries the new column.
+    assert "Outlier" in md
+    lines = md.splitlines()
+    comps_row = next(line for line in lines if line.startswith("| comps "))
+    dcf_row = next(line for line in lines if line.startswith("| dcf "))
+    assert dcf_row.rstrip().endswith("| yes |")
+    assert comps_row.rstrip().endswith("|  |")

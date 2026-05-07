@@ -45,6 +45,7 @@ class Triangulator:
             )
 
         results = [m.value(request) for m in applicable]
+        outlier_method_names = self._compute_outliers(results)
         weights = self._compute_weights(results, request)
 
         # `weights` is built in lockstep with `results`; pair by index.
@@ -65,11 +66,30 @@ class Triangulator:
             range_high=high,
             dispersion=dispersion,
             dispersion_flag=dispersion_flag,
+            outlier_method_names=outlier_method_names,
             method_results=results,
             weights=weights,
             request=request,
             generated_at=datetime.now(UTC),
         )
+
+    @staticmethod
+    def _compute_outliers(results: list[MethodResult]) -> list[str]:
+        if len(results) < 3:
+            return []
+        sorted_points = sorted(r.point_estimate for r in results)
+        n = len(sorted_points)
+        if n % 2 == 1:
+            median = sorted_points[n // 2]
+        else:
+            median = (sorted_points[n // 2 - 1] + sorted_points[n // 2]) / Decimal(2)
+        if median == 0:
+            return []
+        upper = 2 * median
+        lower = median / 2
+        return [
+            r.method_name for r in results if r.point_estimate > upper or r.point_estimate < lower
+        ]
 
     @staticmethod
     def _compute_weights(
