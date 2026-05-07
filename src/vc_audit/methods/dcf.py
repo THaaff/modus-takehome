@@ -4,7 +4,11 @@ Pure-math method that operates on the request's `projections`. After-tax FCF per
 projection year is discounted at `discount_rate`; a Gordon-growth terminal value at
 end-of-horizon is discounted back as well. Enterprise value is the sum.
 
-The ±22.5% range is a placeholder for the T15 sensitivity grid; see Assumption.
+The range is derived from a 3x3 sensitivity grid (discount_rate +/- 1pp x
+terminal_growth +/- 0.5pp), with min/max across the valid cells as the bounds and
+the midpoint of those bounds as the point estimate. Cells where the perturbed
+terminal growth meets or exceeds the perturbed discount rate (Gordon instability)
+are skipped and surfaced in the assumption rationale.
 
 D&A tax shield is not modeled — slightly conservative (true after-tax FCF is a touch
 higher when D&A is non-trivial). Documented as an Assumption.
@@ -24,11 +28,20 @@ from vc_audit.models import (
     ValuationRequest,
 )
 
-# ±22.5% midpoint range placeholder — replaced in T15 by 3×3 sensitivity grid.
-_RANGE_LOW_FACTOR = Decimal("0.775")
-_RANGE_HIGH_FACTOR = Decimal("1.225")
 # Confidence saturates at 5 projection years.
 _CONFIDENCE_SATURATION_YEARS = Decimal("5")
+
+# Sensitivity grid offsets applied to the auditor-supplied rates.
+_DISCOUNT_RATE_DELTAS: tuple[Decimal, ...] = (
+    Decimal("-0.01"),
+    Decimal("0"),
+    Decimal("0.01"),
+)
+_TERMINAL_GROWTH_DELTAS: tuple[Decimal, ...] = (
+    Decimal("-0.005"),
+    Decimal("0"),
+    Decimal("0.005"),
+)
 
 
 def _format_rate(rate: Decimal) -> str:
@@ -38,6 +51,53 @@ def _format_rate(rate: Decimal) -> str:
     the assumption name (Discount rate, Terminal growth rate, Tax rate).
     """
     return f"{(rate * 100).quantize(Decimal('0.01')):f}%"
+
+
+def _compute_ev(
+    projections: list[FinancialProjection],
+    r: Decimal,
+    g: Decimal,
+    tax: Decimal,
+) -> Decimal:
+    """Single-cell DCF: PV of per-year FCFs plus discounted Gordon terminal value.
+
+    Caller must ensure ``g < r`` (Gordon stability); this helper does no guarding.
+    """
+    pv_sum = Decimal(0)
+    fcf_final = Decimal(0)
+    t_final = 0
+    for proj in projections:
+        fcf = proj.ebitda * (Decimal(1) - tax) - proj.capex - proj.change_in_nwc
+        pv_sum += fcf / ((Decimal(1) + r) ** proj.year)
+        fcf_final = fcf
+        t_final = proj.year
+    terminal_value = fcf_final * (Decimal(1) + g) / (r - g)
+    pv_terminal = terminal_value / ((Decimal(1) + r) ** t_final)
+    return pv_sum + pv_terminal
+
+
+def _run_sensitivity_grid(
+    projections: list[FinancialProjection],
+    r: Decimal,
+    g: Decimal,
+    tax: Decimal,
+) -> tuple[list[Decimal], int]:
+    """Compute the 3x3 grid of EVs, skipping cells that violate Gordon stability.
+
+    Returns ``(evs, skipped)``: the list of valid-cell enterprise values and the
+    count of cells skipped because the perturbed ``g'`` was >= the perturbed ``r'``.
+    """
+    evs: list[Decimal] = []
+    skipped = 0
+    for dr in _DISCOUNT_RATE_DELTAS:
+        for dg in _TERMINAL_GROWTH_DELTAS:
+            r_p = r + dr
+            g_p = g + dg
+            if g_p >= r_p:
+                skipped += 1
+                continue
+            evs.append(_compute_ev(projections, r_p, g_p, tax))
+    return evs, skipped
 
 
 class DCFMethod(ValuationMethod):
@@ -90,34 +150,43 @@ class DCFMethod(ValuationMethod):
         tax = request.tax_rate
         n_years = len(projections)
 
-        # Step 1+2: per-year after-tax FCF discounted to PV.
-        pv_sum = Decimal(0)
-        fcf_final = Decimal(0)
-        t_final = 0
-        for proj in projections:
-            fcf = self._fcf(proj, tax)
-            discount = (Decimal(1) + r) ** proj.year
-            pv_sum += fcf / discount
-            fcf_final = fcf
-            t_final = proj.year
+        evs, skipped = _run_sensitivity_grid(projections, r, g, tax)
 
-        # Step 3: Gordon-growth terminal value at end of horizon, then discount back.
-        terminal_value = fcf_final * (Decimal(1) + g) / (r - g)
-        pv_terminal = terminal_value / ((Decimal(1) + r) ** t_final)
+        if not evs:
+            # Defensive fallback: every grid cell hit Gordon instability. is_applicable
+            # already enforces g < r at center, so this only fires for adversarial
+            # inputs that bypass the gate.
+            center = _compute_ev(projections, r, g, tax)
+            point = low = high = center
+            grid_assumption = Assumption(
+                name="Sensitivity grid",
+                value="3x3 (discount_rate +/- 1pp x terminal_growth +/- 0.5pp)",
+                rationale=(
+                    "fallback: full grid skipped (every cell hit Gordon stability), "
+                    "used center cell only."
+                ),
+            )
+        else:
+            low = min(evs)
+            high = max(evs)
+            point = (low + high) / Decimal(2)
+            valid_cells = 9 - skipped
+            grid_assumption = Assumption(
+                name="Sensitivity grid",
+                value="3x3 (discount_rate +/- 1pp x terminal_growth +/- 0.5pp)",
+                rationale=(
+                    f"Range = min/max across {valid_cells} valid cells; "
+                    f"point = midpoint. {skipped} cell(s) skipped "
+                    "(Gordon stability: g >= r)."
+                ),
+            )
 
-        # Step 4: enterprise value.
-        ev = pv_sum + pv_terminal
-
-        # Step 5: range ±22.5% around the point estimate.
-        low = ev * _RANGE_LOW_FACTOR
-        high = ev * _RANGE_HIGH_FACTOR
-
-        # Step 6: confidence — horizon coverage × completeness.
+        # Confidence — horizon coverage × completeness.
         years_factor = min(Decimal(1), Decimal(n_years) / _CONFIDENCE_SATURATION_YEARS)
         completeness = self._completeness_ratio(projections)
         confidence = years_factor * completeness
 
-        assumptions = self._build_assumptions(request, n_years)
+        assumptions = self._build_assumptions(request, n_years, grid_assumption)
         citations = [
             Citation(
                 source="ValuationRequest:projections",
@@ -130,17 +199,19 @@ class DCFMethod(ValuationMethod):
             )
         ]
 
+        valid_cells_for_notes = len(evs) if evs else 1
         return MethodResult(
             method_name=self.name,
-            point_estimate=ev,
+            point_estimate=point,
             low=low,
             high=high,
             confidence=confidence,
             assumptions=assumptions,
             citations=citations,
             notes=(
-                f"Sum of {n_years} discounted FCFs plus Gordon terminal "
-                f"(g={g}) discounted at r={r}."
+                f"3x3 sensitivity grid (discount_rate +/- 1pp x terminal_growth "
+                f"+/- 0.5pp) over {n_years} projection years; range = min/max "
+                f"across {valid_cells_for_notes} valid cells, point = midpoint."
             ),
         )
 
@@ -171,7 +242,11 @@ class DCFMethod(ValuationMethod):
         return populated / expected
 
     @staticmethod
-    def _build_assumptions(request: ValuationRequest, n_years: int) -> list[Assumption]:
+    def _build_assumptions(
+        request: ValuationRequest,
+        n_years: int,
+        grid_assumption: Assumption,
+    ) -> list[Assumption]:
         assert request.discount_rate is not None
         assert request.terminal_growth_rate is not None
         tax_rationale = (
@@ -200,14 +275,7 @@ class DCFMethod(ValuationMethod):
                 value="EBITDA × (1 − tax) − capex − ΔNWC",
                 rationale="No D&A tax shield modeled — slightly conservative.",
             ),
-            Assumption(
-                name="Range factor",
-                value="±22.5%",
-                rationale=(
-                    "Placeholder for T15 sensitivity grid; will be replaced by "
-                    "3×3 (discount_rate ± 1pp × terminal_growth ± 0.5pp) in Phase 3."
-                ),
-            ),
+            grid_assumption,
             Assumption(
                 name="Confidence formula",
                 value=f"min(1, {n_years}/5) × completeness_ratio",
