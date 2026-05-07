@@ -1,0 +1,22 @@
+{
+  "company": {
+    "name": "Lumina Analytics",
+    "sector": "SaaS"
+  },
+  "revenue": "80.0",
+  "ebitda": "8.0",
+  "last_post_money_valuation": "250.0",
+  "last_round_date": "2024-01-31",
+  "reference_index": "NASDAQ",
+  "projections": [
+    {"year": 1, "revenue": "100.0", "ebitda": "10.0",  "capex": "5.0", "change_in_nwc": "3.0"},
+    {"year": 2, "revenue": "150.0", "ebitda": "25.0",  "capex": "5.0", "change_in_nwc": "3.0"},
+    {"year": 3, "revenue": "220.0", "ebitda": "50.0",  "capex": "5.0", "change_in_nwc": "3.0"},
+    {"year": 4, "revenue": "320.0", "ebitda": "80.0",  "capex": "5.0", "change_in_nwc": "3.0"},
+    {"year": 5, "revenue": "450.0", "ebitda": "120.0", "capex": "5.0", "change_in_nwc": "3.0"}
+  ],
+  "discount_rate": "0.10",
+  "terminal_growth_rate": "0.03",
+  "tax_rate": "0.21",
+  "as_of_date": "2026-03-31"
+}

@@ -1,0 +1,27 @@
+{
+  "company": {
+    "name": "Atlas Cloud Inc.",
+    "sector": "SaaS"
+  },
+  "revenue": "500.0",
+  "ebitda": "75.0",
+  "last_post_money_valuation": "4500.0",
+  "last_round_date": "2023-09-29",
+  "reference_index": "NASDAQ",
+  "projections": [
+    {"year": 1, "revenue": "600.0", "ebitda": "100.0", "capex": "30.0", "change_in_nwc": "10.0"},
+    {"year": 2, "revenue": "720.0", "ebitda": "130.0", "capex": "35.0", "change_in_nwc": "12.0"},
+    {"year": 3, "revenue": "850.0", "ebitda": "160.0", "capex": "40.0", "change_in_nwc": "14.0"},
+    {"year": 4, "revenue": "970.0", "ebitda": "185.0", "capex": "45.0", "change_in_nwc": "15.0"},
+    {"year": 5, "revenue": "1080.0", "ebitda": "210.0", "capex": "50.0", "change_in_nwc": "16.0"}
+  ],
+  "discount_rate": "0.12",
+  "terminal_growth_rate": "0.03",
+  "tax_rate": "0.21",
+  "method_weights": {
+    "comps": "0.7",
+    "dcf": "0.2",
+    "last_round": "0.1"
+  },
+  "as_of_date": "2026-03-31"
+}

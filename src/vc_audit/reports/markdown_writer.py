@@ -3,15 +3,16 @@
 Renders a `TriangulatedValuation` as an audit-trail markdown report:
 header → headline → per-method breakdown table + per-method detail blocks → echoed request.
 
-Numeric formatting:
-- Currency uses thousands-separator formatting on a `Decimal` value (`format(d, ',f')`).
-- Percentages (dispersion, confidence, weight) use `f"{float(v):.2%}"` — float coercion
-  is acceptable for display only.
+Numeric formatting (units always labeled at the call site):
+- Money values are in $M (millions of US dollars), rendered as `$1,234.56M` (always 2dp).
+- Fractions in [0, 1] (confidence, weights) render as `12.34%`.
+- Dispersion is a unitless ratio rendered as `1.0135` (not %, since it can exceed 100%
+  and reads better as a multiplier of the point estimate).
 
 Plain-text status markers ("(FLAG)", "(within tolerance)") are used in place of emoji.
 """
 
-from decimal import Decimal
+from decimal import ROUND_HALF_UP, Decimal
 from pathlib import Path
 
 from vc_audit.models import (
@@ -62,9 +63,12 @@ def _headline(valuation: TriangulatedValuation) -> str:
         [
             "## Headline",
             "",
+            "_Money values are in $M (millions of US dollars). "
+            "Confidence and weights are in [0, 1]. Dispersion is a unitless ratio._",
+            "",
             f"- **Point estimate:** {_currency(valuation.point_estimate)}",
             f"- **Range:** {_currency(valuation.range_low)} – {_currency(valuation.range_high)}",
-            f"- **Dispersion:** {_percent(valuation.dispersion)} {flag}",
+            f"- **Dispersion:** {_ratio(valuation.dispersion)} {flag}",
         ]
     )
 
@@ -74,7 +78,7 @@ def _method_breakdown(valuation: TriangulatedValuation) -> str:
     table_lines = [
         "## Method breakdown",
         "",
-        "| Method | Point | Low | High | Confidence | Weight | Overridden |",
+        "| Method | Point ($M) | Low ($M) | High ($M) | Confidence | Weight | Overridden |",
         "|---|---|---|---|---|---|---|",
     ]
     for result in valuation.method_results:
@@ -142,19 +146,25 @@ def _request_appendix(valuation: TriangulatedValuation) -> str:
 
 
 def _currency(value: Decimal) -> str:
-    """Render a Decimal as a $-prefixed amount with thousands separators.
+    """Render a $M amount as ``$1,234.56M`` — always 2dp, thousands-separated.
 
-    Trailing zeros after the decimal are stripped where they don't change precision
-    (e.g. ``100.00 → 100``, ``100.50 → 100.5``).
+    Money is in millions of US dollars by convention (see the headline's units note);
+    the ``M`` suffix makes that explicit at every call site.
     """
-    normalized = value.normalize() if value == value.to_integral_value() else value
-    # `format(Decimal, ',f')` adds thousands separators without scientific notation.
-    text = format(normalized, ",f")
-    # Strip trailing zeros after a decimal point (without affecting integer values).
-    if "." in text:
-        text = text.rstrip("0").rstrip(".")
-    return f"${text}"
+    quantized = value.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+    return f"${format(quantized, ',f')}M"
 
 
 def _percent(value: Decimal) -> str:
+    """Render a [0, 1] fraction as ``12.34%`` for confidence/weights."""
     return f"{float(value):.2%}"
+
+
+def _ratio(value: Decimal) -> str:
+    """Render a unitless ratio (e.g., dispersion) as ``1.0135``.
+
+    Kept as a plain ratio rather than a percent because dispersion can exceed 100%
+    and "101.35%" reads worse than "1.0135 (= ratio of high–low spread to point)".
+    """
+    quantized = value.quantize(Decimal("0.0001"), rounding=ROUND_HALF_UP)
+    return format(quantized, "f")

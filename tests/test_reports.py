@@ -18,24 +18,25 @@ from vc_audit.reports import to_json_str, to_markdown_str, write_json, write_mar
 
 def _make_valuation(
     *,
-    point: Decimal = Decimal("85000000"),
-    low: Decimal = Decimal("60000000"),
-    high: Decimal = Decimal("110000000"),
+    point: Decimal = Decimal("85"),
+    low: Decimal = Decimal("60"),
+    high: Decimal = Decimal("110"),
     dispersion: Decimal = Decimal("0.588"),
     dispersion_flag: bool = True,
 ) -> TriangulatedValuation:
+    # All money values are in $M (millions of US dollars), per project convention.
     request = ValuationRequest(
         company=PortfolioCompany(name="Basis AI", sector="SaaS"),
-        revenue=Decimal("12500000"),
-        ebitda=Decimal("2100000"),
+        revenue=Decimal("12.5"),
+        ebitda=Decimal("2.1"),
         as_of_date=date(2026, 5, 6),
     )
     method_results = [
         MethodResult(
             method_name="comps",
-            point_estimate=Decimal("80000000"),
-            low=Decimal("60000000"),
-            high=Decimal("100000000"),
+            point_estimate=Decimal("80"),
+            low=Decimal("60"),
+            high=Decimal("100"),
             confidence=Decimal("0.6"),
             assumptions=[Assumption(name="EV/Revenue", value="6.4x", rationale="Sector median.")],
             citations=[
@@ -49,14 +50,14 @@ def _make_valuation(
         ),
         MethodResult(
             method_name="dcf",
-            point_estimate=Decimal("90000000"),
-            low=Decimal("70000000"),
-            high=Decimal("110000000"),
+            point_estimate=Decimal("90"),
+            low=Decimal("70"),
+            high=Decimal("110"),
             confidence=Decimal("0.4"),
             assumptions=[
                 Assumption(
                     name="Discount rate",
-                    value="0.12",
+                    value="12.00%",
                     rationale="Auditor-supplied.",
                 )
             ],
@@ -108,7 +109,7 @@ def test_json_round_trip_preserves_decimals() -> None:
     # Spot-check Decimal precision
     assert parsed.point_estimate == valuation.point_estimate
     assert parsed.dispersion == valuation.dispersion
-    assert parsed.method_results[0].point_estimate == Decimal("80000000")
+    assert parsed.method_results[0].point_estimate == Decimal("80")
 
 
 def test_write_json_writes_round_trippable_file(tmp_path: Path) -> None:
@@ -152,9 +153,9 @@ def test_markdown_contains_each_method_name_and_point_estimate() -> None:
     md = to_markdown_str(valuation)
     for result in valuation.method_results:
         assert result.method_name in md
-    # Currency strings — formatter strips trailing zeros after decimal.
-    assert "$80,000,000" in md
-    assert "$90,000,000" in md
+    # Currency strings — values are in $M, always rendered with 2dp + M suffix.
+    assert "$80.00M" in md
+    assert "$90.00M" in md
 
 
 def test_write_markdown_matches_to_markdown_str(tmp_path: Path) -> None:
