@@ -456,3 +456,11 @@ The repo now ships rendered artifacts under `examples/outputs/` — one `.json` 
 **Why `examples/outputs/` is now tracked in git**: it was previously gitignored (Phase 0 default for "generated reports"), but for a take-home submission the artifacts are the demo. Removed the gitignore entry; `make examples` is re-runnable so a reviewer can verify the artifacts match what the engine produces.
 
 **Spot-check status**: every DCF-applicable fixture (`dcf_only`, `full`, `high_dispersion`, `with_overrides`) carries the "Sensitivity grid" assumption; `full.md` and `with_overrides.md` flag `dcf` as the outlier method, `high_dispersion.md` flags `last_round`, and `full.md`'s dispersion is 2.5088 (matches the design note above). The two non-DCF fixtures (`comps_only`, `last_round_only`) intentionally have no sensitivity-grid assumption since DCF doesn't run for them.
+
+### Phase 3 (T13 README)
+
+Replaced the Phase 0 scaffolding stub with a take-home submission front door — eight sections covering what the tool is, the methodology table, a thinned architecture diagram (the full one lives in `PLAN.md` §3), a Quickstart with the five make targets, a per-surface usage block (CLI / API / UI), a flat list of the load-bearing design decisions, a "what I'd do next" section, and a 10-line repo-layout tree. Target was the prompt's "max 1 page" — the result is one screenful of markdown.
+
+**Deliberately out of scope**: extensive benchmarking, Docker setup, deployment notes, contribution guidelines, and CI badges. The take-home prompt scope is "structured, auditable workflow" — operations material would dilute the signal that the engine and audit trail are the substance. The README points at `PLAN.md` and `discussion.md` for readers who want the deeper rationale; the trail is one click deep, not buried.
+
+**Why one bundled-pair link rather than every fixture**: the README cites `examples/inputs/full.json` ↔ `examples/outputs/full.md` as the canonical demo pair. Listing all six would compete with the methodology table for the reader's attention; the rest are discoverable via `examples/` and `make examples`.
