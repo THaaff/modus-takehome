@@ -1,0 +1,215 @@
+{
+  "company": {
+    "name": "Atlas Cloud Inc.",
+    "sector": "SaaS"
+  },
+  "as_of_date": "2026-03-31",
+  "point_estimate": "2438.43",
+  "range_low": "764.68",
+  "range_high": "6882.13",
+  "dispersion": "2.5088",
+  "dispersion_flag": true,
+  "outlier_method_names": [
+    "dcf"
+  ],
+  "method_results": [
+    {
+      "method_name": "comps",
+      "point_estimate": "5483.17",
+      "low": "4170.55",
+      "high": "6803.47",
+      "confidence": "0.5000",
+      "assumptions": [
+        {
+          "name": "Multiples used",
+          "value": "EV/Revenue and EV/EBITDA",
+          "rationale": "EV/Revenue applied whenever target revenue and >=1 peer revenue are present; EV/EBITDA additionally applied when target EBITDA and >=2 peers' EBITDA are positive."
+        },
+        {
+          "name": "EV/Revenue median multiple",
+          "value": "13.39x",
+          "rationale": "Median across sector peers; 25/75 percentile drives low/high."
+        },
+        {
+          "name": "EV/EBITDA median multiple",
+          "value": "56.94x",
+          "rationale": "Median across sector peers with positive EBITDA."
+        },
+        {
+          "name": "Peer count",
+          "value": "4",
+          "rationale": "Number of sector-matched peers found in the comps universe; drives confidence via min(1, n/8)."
+        }
+      ],
+      "citations": [
+        {
+          "source": "CompsProvider:mock_universe_v1",
+          "description": "Peer set: CRM, DDOG, NOW, WDAY (sector=SaaS, n=4)",
+          "retrieved_at": "2026-05-07T04:52:54.796159Z",
+          "url": null
+        }
+      ],
+      "notes": null
+    },
+    {
+      "method_name": "last_round",
+      "point_estimate": "5984.46",
+      "low": "5086.79",
+      "high": "6882.13",
+      "confidence": "0.0000",
+      "assumptions": [
+        {
+          "name": "Reference index",
+          "value": "NASDAQ",
+          "rationale": "Used as a public-market proxy for the period return between last round and as-of date."
+        },
+        {
+          "name": "Range factor",
+          "value": "+/-15%",
+          "rationale": "Basis-risk haircut/expansion to reflect that the chosen index is an imperfect proxy for the company's specific industry beta."
+        },
+        {
+          "name": "Index lookup strategy",
+          "value": "nearest-prior date",
+          "rationale": "Returns the closing level of the most recent entry on or before the requested date. Defensible heuristic in the absence of daily granularity; emit as a known approximation rather than interpolating."
+        },
+        {
+          "name": "Age decay",
+          "value": "914 days; confidence = max(0, 1 - age/730)",
+          "rationale": "Last-round signal degrades as the round becomes stale; zero confidence at 2 years."
+        }
+      ],
+      "citations": [
+        {
+          "source": "MarketIndexProvider:mock_nasdaq_v1",
+          "description": "NASDAQ 13219.32 on 2023-09-29 -> 17580.12 on 2026-03-31",
+          "retrieved_at": "2026-05-07T04:52:54.796306Z",
+          "url": null
+        }
+      ],
+      "notes": null
+    },
+    {
+      "method_name": "dcf",
+      "point_estimate": "916.07",
+      "low": "764.68",
+      "high": "1067.46",
+      "confidence": "1.0000",
+      "assumptions": [
+        {
+          "name": "Discount rate",
+          "value": "12.00%",
+          "rationale": "Auditor-supplied WACC proxy."
+        },
+        {
+          "name": "Terminal growth rate",
+          "value": "3.00%",
+          "rationale": "Long-run nominal growth; must be < discount rate (Gordon stability)."
+        },
+        {
+          "name": "Tax rate",
+          "value": "21.00%",
+          "rationale": "default; auditor can override"
+        },
+        {
+          "name": "FCF formula",
+          "value": "EBITDA × (1 − tax) − capex − ΔNWC",
+          "rationale": "No D&A tax shield modeled — slightly conservative."
+        },
+        {
+          "name": "Sensitivity grid",
+          "value": "3x3 (discount_rate +/- 1pp x terminal_growth +/- 0.5pp)",
+          "rationale": "Range = min/max across 9 valid cells; point = midpoint. 0 cell(s) skipped (Gordon stability: g >= r)."
+        },
+        {
+          "name": "Confidence formula",
+          "value": "min(1, 5/5) × completeness_ratio",
+          "rationale": "Saturates at 5 projection years; completeness counts non-zero revenue/ebitda/capex across years (ΔNWC excluded — default is 0)."
+        }
+      ],
+      "citations": [
+        {
+          "source": "ValuationRequest:projections",
+          "description": "DCF on 5 projection years; discount=0.12, terminal_growth=0.03, tax=0.21",
+          "retrieved_at": "2026-05-07T04:52:54.796360Z",
+          "url": null
+        }
+      ],
+      "notes": "3x3 sensitivity grid (discount_rate +/- 1pp x terminal_growth +/- 0.5pp) over 5 projection years; range = min/max across 9 valid cells, point = midpoint."
+    }
+  ],
+  "weights": [
+    {
+      "method_name": "comps",
+      "raw_confidence": "0.5000",
+      "normalized_weight": "0.3333",
+      "overridden": false
+    },
+    {
+      "method_name": "last_round",
+      "raw_confidence": "0.0000",
+      "normalized_weight": "0.0000",
+      "overridden": false
+    },
+    {
+      "method_name": "dcf",
+      "raw_confidence": "1.0000",
+      "normalized_weight": "0.6667",
+      "overridden": false
+    }
+  ],
+  "request": {
+    "company": {
+      "name": "Atlas Cloud Inc.",
+      "sector": "SaaS"
+    },
+    "revenue": "500.0",
+    "ebitda": "75.0",
+    "last_post_money_valuation": "4500.0",
+    "last_round_date": "2023-09-29",
+    "reference_index": "NASDAQ",
+    "projections": [
+      {
+        "year": 1,
+        "revenue": "600.0",
+        "ebitda": "100.0",
+        "capex": "30.0",
+        "change_in_nwc": "10.0"
+      },
+      {
+        "year": 2,
+        "revenue": "720.0",
+        "ebitda": "130.0",
+        "capex": "35.0",
+        "change_in_nwc": "12.0"
+      },
+      {
+        "year": 3,
+        "revenue": "850.0",
+        "ebitda": "160.0",
+        "capex": "40.0",
+        "change_in_nwc": "14.0"
+      },
+      {
+        "year": 4,
+        "revenue": "970.0",
+        "ebitda": "185.0",
+        "capex": "45.0",
+        "change_in_nwc": "15.0"
+      },
+      {
+        "year": 5,
+        "revenue": "1080.0",
+        "ebitda": "210.0",
+        "capex": "50.0",
+        "change_in_nwc": "16.0"
+      }
+    ],
+    "discount_rate": "0.12",
+    "terminal_growth_rate": "0.03",
+    "tax_rate": "0.21",
+    "method_weights": null,
+    "as_of_date": "2026-03-31"
+  },
+  "generated_at": "2026-05-07T04:52:54.796377Z"
+}

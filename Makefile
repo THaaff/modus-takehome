@@ -1,4 +1,4 @@
-.PHONY: install lint format format-check typecheck test check clean dev ui
+.PHONY: install lint format format-check typecheck test check clean dev ui examples
 
 install:
 	uv sync
@@ -28,3 +28,12 @@ dev:
 
 ui:
 	uv run --extra ui streamlit run src/vc_audit/ui/app.py
+
+examples:
+	@mkdir -p examples/outputs
+	@for f in examples/inputs/*.json; do \
+		stem=$$(basename $$f .json); \
+		uv run vc-audit value -i $$f --format json > examples/outputs/$$stem.json; \
+		uv run vc-audit value -i $$f --format markdown > examples/outputs/$$stem.md; \
+		echo "examples/outputs/$$stem.{json,md}"; \
+	done

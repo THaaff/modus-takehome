@@ -37,6 +37,4 @@ htmlcov/
 .env.*
 !.env.example
 
-# Generated reports
-examples/outputs/
 *.log
