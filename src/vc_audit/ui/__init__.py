@@ -1,1 +1,1 @@
-"""Optional Streamlit UI (stretch T16)."""
+"""Optional Streamlit UI."""

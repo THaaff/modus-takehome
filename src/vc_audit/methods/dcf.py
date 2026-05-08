@@ -18,8 +18,8 @@ from datetime import UTC, datetime
 from decimal import Decimal
 from typing import ClassVar
 
+from vc_audit._formatting import format_percent_rate
 from vc_audit.methods.base import ValuationMethod
-from vc_audit.methods.descriptor import MethodDescriptor
 from vc_audit.models import (
     Assumption,
     Citation,
@@ -44,15 +44,6 @@ _TERMINAL_GROWTH_DELTAS: tuple[Decimal, ...] = (
     Decimal("0"),
     Decimal("0.005"),
 )
-
-
-def _format_rate(rate: Decimal) -> str:
-    """Render an annual rate (e.g., 0.12) as ``12.00%`` for assumption display.
-
-    The ``%`` suffix disambiguates from raw decimals; ``per annum`` is implicit in
-    the assumption name (Discount rate, Terminal growth rate, Tax rate).
-    """
-    return f"{(rate * 100).quantize(Decimal('0.01')):f}%"
 
 
 def _compute_ev(
@@ -143,15 +134,8 @@ class DCFMethod(ValuationMethod):
         "terminal_growth_rate",
     )
 
-    @classmethod
-    def describe(cls) -> MethodDescriptor:
-        return MethodDescriptor(
-            name=cls.name,
-            description=cls.description,
-            required_inputs=list(cls.required_inputs),
-        )
-
     def is_applicable(self, request: ValuationRequest) -> bool:
+        """Need >=2 projection years, both rates, and Gordon stability (g < r)."""
         if request.projections is None or len(request.projections) < 2:
             return False
         if request.discount_rate is None or request.terminal_growth_rate is None:
@@ -160,6 +144,7 @@ class DCFMethod(ValuationMethod):
         return request.terminal_growth_rate < request.discount_rate
 
     def inapplicability_reason(self, request: ValuationRequest) -> str:
+        """Pinpoint which input — projections, rates, or Gordon stability — caused the skip."""
         if request.projections is None or len(request.projections) < 2:
             return "DCF requires at least 2 years of financial projections."
         if request.discount_rate is None:
@@ -177,6 +162,10 @@ class DCFMethod(ValuationMethod):
         return super().inapplicability_reason(request)
 
     def value(self, request: ValuationRequest) -> MethodResult:
+        """Run the DCF and return the result with its sensitivity grid attached.
+
+        Caller must have checked `is_applicable`; this method asserts the invariants.
+        """
         # Caller is responsible for is_applicable; assert the invariants we relied on.
         assert request.projections is not None
         assert request.discount_rate is not None
@@ -267,11 +256,6 @@ class DCFMethod(ValuationMethod):
         )
 
     @staticmethod
-    def _fcf(proj: FinancialProjection, tax: Decimal) -> Decimal:
-        """After-tax FCF = EBITDA × (1 − tax) − capex − ΔNWC. No D&A tax shield."""
-        return proj.ebitda * (Decimal(1) - tax) - proj.capex - proj.change_in_nwc
-
-    @staticmethod
     def _completeness_ratio(projections: list[FinancialProjection]) -> Decimal:
         """Fraction of expected (revenue, ebitda, capex) fields populated across years.
 
@@ -298,6 +282,7 @@ class DCFMethod(ValuationMethod):
         n_years: int,
         grid_assumption: Assumption,
     ) -> list[Assumption]:
+        """Render the rate/formula/grid/confidence assumptions that ship with every DCF run."""
         assert request.discount_rate is not None
         assert request.terminal_growth_rate is not None
         tax_rationale = (
@@ -308,17 +293,17 @@ class DCFMethod(ValuationMethod):
         return [
             Assumption(
                 name="Discount rate",
-                value=_format_rate(request.discount_rate),
+                value=format_percent_rate(request.discount_rate),
                 rationale="Auditor-supplied WACC proxy.",
             ),
             Assumption(
                 name="Terminal growth rate",
-                value=_format_rate(request.terminal_growth_rate),
+                value=format_percent_rate(request.terminal_growth_rate),
                 rationale="Long-run nominal growth; must be < discount rate (Gordon stability).",
             ),
             Assumption(
                 name="Tax rate",
-                value=_format_rate(request.tax_rate),
+                value=format_percent_rate(request.tax_rate),
                 rationale=tax_rationale,
             ),
             Assumption(

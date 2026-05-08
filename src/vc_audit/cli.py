@@ -41,8 +41,8 @@ app = typer.Typer(
 
 
 # Resolve relative to the project root (src/ sibling). Works for `uv run` and editable
-# installs; non-editable installs would need package data, which is out of scope for the
-# take-home. T12 verifies via `uv run` so this path is exercised end-to-end.
+# installs; non-editable installs would need package data, which is intentionally out of
+# scope. The integration tests exercise this path end-to-end via `uv run`.
 _EXAMPLE_PATH = Path(__file__).resolve().parent.parent.parent / "examples" / "inputs" / "full.json"
 
 

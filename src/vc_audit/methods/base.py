@@ -1,20 +1,37 @@
 """Strategy-pattern interface every valuation method satisfies.
 
 Methods are stateless and side-effect-free. They receive the full request and return
-a complete `MethodResult` including their own confidence score. The Triangulator (T7)
-asks each method whether it is applicable, runs the applicable ones, and synthesizes.
+a complete `MethodResult` including their own confidence score. The Triangulator asks
+each method whether it is applicable, runs the applicable ones, and synthesizes.
 """
 
 from abc import ABC, abstractmethod
 from typing import ClassVar
 
+from vc_audit.methods.descriptor import MethodDescriptor
 from vc_audit.models import MethodResult, ValuationRequest
 
 
 class ValuationMethod(ABC):
-    """Abstract base class for all valuation methods."""
+    """Abstract base class for all valuation methods.
+
+    Subclasses declare their identity via three ClassVars (`name`, `description`,
+    `required_inputs`). The default `describe()` builds a `MethodDescriptor` from
+    those — subclasses don't need to override it.
+    """
 
     name: ClassVar[str]
+    description: ClassVar[str]
+    required_inputs: ClassVar[tuple[str, ...]]
+
+    @classmethod
+    def describe(cls) -> MethodDescriptor:
+        """Build the auditor-facing descriptor from the subclass's ClassVars."""
+        return MethodDescriptor(
+            name=cls.name,
+            description=cls.description,
+            required_inputs=list(cls.required_inputs),
+        )
 
     @abstractmethod
     def is_applicable(self, request: ValuationRequest) -> bool:

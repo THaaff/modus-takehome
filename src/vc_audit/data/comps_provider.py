@@ -1,7 +1,7 @@
 """Public-comps universe provider interface.
 
 Real implementations could pull from Yahoo Finance, Bloomberg, internal datasets, etc.
-The mock in T3a reads from a hand-curated JSON fixture.
+The mock reads from a hand-curated JSON fixture.
 """
 
 from datetime import date

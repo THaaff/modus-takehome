@@ -10,9 +10,9 @@ Three endpoints:
   * ``markdown`` → ``text/markdown`` body is the rendered report
   * ``both``     → ``application/json`` envelope ``{valuation, markdown_report}``
 
-Every output is reproducible from the request alone — no IDs, no persistence (see
-``discussion.md`` §7). The Triangulator instance is cached at module import time via
-``functools.lru_cache`` so warm requests skip provider re-instantiation.
+Every output is reproducible from the request alone — no IDs, no persistence. The
+Triangulator instance is cached at module import time via ``functools.lru_cache`` so
+warm requests skip provider re-instantiation.
 """
 
 from enum import StrEnum

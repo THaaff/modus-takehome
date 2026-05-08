@@ -168,5 +168,5 @@ class TriangulatedValuation(BaseModel):
 
     @classmethod
     def dispersion_threshold(cls) -> Decimal:
-        """Threshold above which `dispersion_flag` should be True. See discussion.md §5c."""
+        """Threshold above which `dispersion_flag` should be True."""
         return Decimal("0.5")
