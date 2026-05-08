@@ -7,12 +7,12 @@
 ## What the engine does
 
 The `Triangulator`:
-- asks each method `is_applicable(request)` so missing inputs don't kill the run,
+- asks each method `is_applicable(request)` so missing inputs don't end the run,
 - normalizes per-method confidence into weights,
 - computes `point = Σ wᵢ × pointᵢ`, `range = (min(lowᵢ), max(highᵢ))`,
-- flags `dispersion = (high − low) / point > 0.5`,
+- flags `dispersion = (high − low) / point > 0.5`, a signal that a run might need more human investigation,
 - names the **outlier** method (>2× or <0.5× the median across applicable methods),
-- accepts `request.method_weights` so auditor judgment is a typed, validated input — not a footnote.
+- accepts `request.method_weights` so auditor judgment is a typed, validated input.
 
 Confidence is per-method, derived from the data: DCF scales with horizon coverage × completeness; Last Round decays exponentially with round age (zero at 2 years); Comps scales with peer count.
 
@@ -28,7 +28,7 @@ Confidence is per-method, derived from the data: DCF scales with horizon coverag
 ```bash
 make install                    # uv sync
 make check                      # ruff + format-check + mypy --strict + pytest (176 tests)
-make dev                        # FastAPI on :8000 — see /docs for OpenAPI
+make dev                        # FastAPI on :8000, see /docs for OpenAPI
 make ui                         # Streamlit demo on :8501 (uv sync --extra ui first)
 make examples                   # regenerate examples/outputs/ from examples/inputs/
 ```
@@ -37,27 +37,27 @@ make examples                   # regenerate examples/outputs/ from examples/inp
 
 ## Using the tool
 
-**CLI** — one command per format, or `both` to write into a directory:
+**CLI**: one command per format, or `both` to write into a directory:
 
 ```bash
 uv run vc-audit example | uv run vc-audit value -i /dev/stdin --format markdown
 uv run vc-audit value -i examples/inputs/full.json --format both -o examples/outputs/
 ```
 
-**API** — `POST /valuations` with a `ValuationRequest` JSON body; supports `?format=json|markdown|both`. `/methods` lists registered methods and applicability rules. Live OpenAPI at `localhost:8000/docs`.
+**API**: `POST /valuations` with a `ValuationRequest` JSON body; supports `?format=json|markdown|both`. `/methods` lists registered methods and applicability rules. Live OpenAPI at `localhost:8000/docs`.
 
-**UI** — `make ui` opens a Streamlit page with three input modes (load a bundled fixture, fill a structured form, or paste JSON). Renders the markdown report and raw JSON side-by-side.
+**UI**: `make ui` opens a Streamlit page with three input modes (load a bundled fixture, fill a structured form, or paste JSON). Renders the markdown report and raw JSON side-by-side.
 
 ## Key design decisions
 
-Triangulation over single-method (ASC 820 grounding); `Decimal` everywhere for money and rates; providers behind a `Protocol` so mock/real implementations swap without engine changes; range as elementwise min/max for honest worst-case spread; per-method outlier detection complementing the dispersion flag; DCF range from a 3×3 sensitivity grid rather than a hardcoded ±N% factor; auditor weight overrides as a first-class typed input.
+Triangulation over single-method (ASC 820 grounding); `Decimal` everywhere for money and rates; providers behind a `Protocol` so mock/real implementations swap without engine changes; range as elementwise min/max for worst-case spread; per-method outlier detection complementing the dispersion flag; DCF range from a 3×3 sensitivity grid rather than a hardcoded ±N% factor; auditor weight overrides as a first-class typed input.
 
 See [`PLAN.md`](PLAN.md) §6 for the full decision log including alternatives considered and rejected.
 
 ## What I'd do next
 
 - Real provider integrations (Yahoo Finance / FRED / a peer-comp source) replacing the mocks.
-- **Calibration check** (ASC 820 concept): given a recent observable transaction, recalibrate model multiples to match — quantifies method bias.
+- **Calibration check** (ASC 820 concept): given a recent observable transaction, recalibrate model multiples to match. Quantifies method bias.
 - **OPM Backsolve** as a fourth method for capital-structure-aware allocation across share classes.
 - Per-sector calibration of the dispersion threshold (currently a global 0.5 heuristic).
 - Content-addressed report store: hash request + engine version → cache-immutable output.
@@ -65,9 +65,9 @@ See [`PLAN.md`](PLAN.md) §6 for the full decision log including alternatives co
 
 ## Sources
 
-- [ASC 820-10-35-24B][asc820-24b] — endorses use of multiple valuation techniques when no quoted price exists in an active market, and requires the entity to weigh their results.
-- [ASC 820 fair-value hierarchy (Level 1/2/3)][asc820-l3] — private portfolio companies fall under Level 3 (unobservable inputs).
-- [IPEV Valuation Guidelines (Dec 2025)][ipev] — global VC/PE-specific standard, aligned with ASC 820 and IFRS 13.
+- [ASC 820-10-35-24B][asc820-24b]: endorses use of multiple valuation techniques when no quoted price exists in an active market, and requires the entity to weigh their results.
+- [ASC 820 fair-value hierarchy (Level 1/2/3)][asc820-l3]: private portfolio companies fall under Level 3 (unobservable inputs).
+- [IPEV Valuation Guidelines (Dec 2025)][ipev]: global VC/PE-specific standard, aligned with ASC 820 and IFRS 13.
 - US 21% corporate tax rate (default in `ValuationRequest.tax_rate`): [Internal Revenue Code §11][irc-11].
 
 [asc820-l3]: https://viewpoint.pwc.com/dt/us/en/pwc/accounting_guides/fair_value_measureme/fair_value_measureme__9_US/chapter_1_introducti__1_US/15_key_concepts_in_a_US.html

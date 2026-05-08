@@ -1,10 +1,10 @@
-# VC Audit Tool — Design
+# VC Audit Tool: Design
 
 ---
 
 ## 1. Problem framing
 
-Auditors reviewing VC portfolios need to estimate fair value of private, illiquid companies. Unlike public equities, there is no market price — auditors must derive a defensible estimate from sparse, non-standardized data. The deliverable is not a "correct" valuation; it is a **structured, auditable workflow** that produces consistent, well-documented estimates.
+Auditors reviewing VC portfolios need to estimate fair value of private, illiquid companies. Unlike public equities, there is no market price, so auditors must derive a defensible estimate from sparse, non-standardized data. The deliverable is not a "correct" valuation; it is a **structured, auditable workflow** that produces consistent, well-documented estimates.
 
 The grading rubric (per the prompt) emphasizes:
 
@@ -27,10 +27,10 @@ Rather than implement a single methodology, we implement three (**Comparable Com
 
 ### Why this approach
 
-ASC 820 (the U.S. GAAP fair-value-measurement standard) explicitly encourages cross-checking valuations using multiple techniques when reasonably available. Triangulation is therefore not a gimmick — it is *how the work is actually done*. It also:
+ASC 820 (the U.S. GAAP fair-value-measurement standard) explicitly encourages cross-checking valuations using multiple techniques when reasonably available. Triangulation is therefore not a gimmick; it is *how the work is actually done*. It also:
 
 - Demonstrates a clean strategy-pattern abstraction (vs. one monolithic method).
-- Forces every method to declare its inputs, confidence, and provenance — which directly serves the "auditable" requirement.
+- Forces every method to declare its inputs, confidence, and provenance, which directly serves the "auditable" requirement.
 
 ## 3. Architecture
 
@@ -299,7 +299,7 @@ Methods are stateless and side-effect-free. They receive the full request and re
   3. Apply: `point = last_post_money_valuation × (1 + index_return)`.
   4. Range: `point × [0.85, 1.15]` to reflect basis risk between a single index and a specific company.
 - **Confidence formula:**
-  `max(0, 1 − age_days / 730)` — full confidence at fresh round, zero at 2 years old.
+  `max(0, 1 − age_days / 730)`. Full confidence at fresh round, zero at 2 years old.
 - **Citations:** `MarketIndexProvider:NASDAQ`, the two specific price points used.
 - **Assumptions:** chosen index, ±15% range factor, age decay formula.
 
@@ -307,7 +307,7 @@ Methods are stateless and side-effect-free. They receive the full request and re
 
 - **Applicable when:** `projections` (≥2 years), `discount_rate`, AND `terminal_growth_rate` are all supplied.
 - **Algorithm:**
-  1. Compute after-tax Free Cash Flow per projection year: `FCF = EBITDA × (1 − tax_rate) − capex − ΔNWC`. Default `tax_rate` is 0.21 (US corporate rate); auditor can override via the request field. This simplification does not separately model the depreciation tax shield because we don't carry D&A in the projection schema — slightly conservative (understates FCF).
+  1. Compute after-tax Free Cash Flow per projection year: `FCF = EBITDA × (1 − tax_rate) − capex − ΔNWC`. Default `tax_rate` is 0.21 (US corporate rate); auditor can override via the request field. This simplification does not separately model the depreciation tax shield because we don't carry D&A in the projection schema. Slightly conservative (understates FCF).
   2. Discount each year's FCF at `discount_rate`.
   3. Compute terminal value via Gordon growth: `TV = FCF_final × (1 + g) / (r − g)`, discounted.
   4. Sum to get enterprise value.
@@ -388,7 +388,7 @@ GET  /health
 GET  /methods         (lists registered methods and their input requirements)
 ```
 
-FastAPI auto-generates OpenAPI docs at `/docs` — free demo asset.
+FastAPI auto-generates OpenAPI docs at `/docs`. Free demo asset.
 
 ### 5.9 CLI
 
@@ -398,7 +398,7 @@ vc-audit methods                # list registered methods + their required input
 vc-audit example                # write a sample request JSON to stdout
 ```
 
-Both CLI and API call into the same `Triangulator` — the presentation layer is paper-thin.
+Both CLI and API call into the same `Triangulator`; the presentation layer is paper-thin.
 
 ## 6. Decision log
 
@@ -410,7 +410,7 @@ These are the alternatives we considered and rejected.
 
 **Rejected:**
 - *Single method (Comps only).* Faster to build but limits demonstration of the strategy abstraction and misses the chance to model real audit practice, where cross-checking is encouraged by ASC 820.
-- *Two methods (Comps + Last Round, drop DCF).* Considered because DCF is famously a poor fit for early-stage VC. Decided to keep DCF *because in a triangulation it adds an "intrinsic value" perspective independent of public markets*. Its low default confidence (when projections are short or noisy) means it self-deweights — this is itself an interesting design point.
+- *Two methods (Comps + Last Round, drop DCF).* Considered because DCF is famously a poor fit for early-stage VC. Decided to keep DCF *because in a triangulation it adds an "intrinsic value" perspective independent of public markets*. Its low default confidence (when projections are short or noisy) means it self-deweights, which is itself an interesting design point.
 
 ### 6.2 Range synthesis: min/max vs. weighted envelope
 
@@ -422,10 +422,10 @@ These are the alternatives we considered and rejected.
 
 ### 6.3 Auditor weight overrides: yes vs. no
 
-**Chose:** Yes — `method_weights` is an optional field on `ValuationRequest`.
+**Chose:** Yes. `method_weights` is an optional field on `ValuationRequest`.
 
 **Rejected:**
-- *No override (data-driven only).* Cleaner but unrealistic. Real auditors apply judgment — sometimes a stale Last Round is still the best signal because the comp set is bad, and they need to encode that. Supporting overrides demonstrates domain awareness with low implementation cost.
+- *No override (data-driven only).* Cleaner but unrealistic. Real auditors apply judgment; sometimes a stale Last Round is still the best signal because the comp set is bad, and they need to encode that. Supporting overrides demonstrates domain awareness with low implementation cost.
 
 ### 6.4 Confidence scoring: derived vs. static
 
@@ -468,8 +468,35 @@ These are the alternatives we considered and rejected.
 **Chose:** Compute FCF as `EBITDA × (1 − tax_rate) − capex − ΔNWC`. Default `tax_rate` = 0.21 (US corporate rate); auditor can override via the request field. Both the rate and whether it was defaulted vs. overridden are emitted as explicit Assumptions in the output.
 
 **Rejected:**
-- *No tax adjustment* (`FCF = EBITDA − capex − ΔNWC`). Simpler but overstates FCF by ~20% at typical tax rates. Defensible only because early-stage co's often have NOLs that shield taxes, but that's not universal — and "we ignored taxes" is the obvious first question to ask of any DCF. Adding the tax adjustment is cheap and preempts it.
-- *Full textbook unlevered FCF* (`FCF = EBIT × (1 − tax) + D&A − capex − ΔNWC`). Most accurate, but requires carrying D&A in the projection schema and modeling the depreciation tax shield. More inputs to defend, more places to be wrong, marginal accuracy gain at this scope. Our chosen formula is a deliberate middle ground — taxes are present, but D&A complexity is not.
+- *No tax adjustment* (`FCF = EBITDA − capex − ΔNWC`). Simpler but overstates FCF by ~20% at typical tax rates. Defensible only because early-stage co's often have NOLs that shield taxes, but that's not universal, and "we ignored taxes" is the obvious first question to ask of any DCF. Adding the tax adjustment is cheap and preempts it.
+- *Full textbook unlevered FCF* (`FCF = EBIT × (1 − tax) + D&A − capex − ΔNWC`). Most accurate, but requires carrying D&A in the projection schema and modeling the depreciation tax shield. More inputs to defend, more places to be wrong, marginal accuracy gain at this scope. Our chosen formula is a deliberate middle ground: taxes are present, but D&A complexity is not.
+
+### 6.10 DCF range: 3×3 sensitivity grid vs. hardcoded ±N% factor
+
+**Chose:** A 3×3 sensitivity grid sweeping `discount_rate ± 1pp` × `terminal_growth ± 0.5pp`. Min/max across the valid cells defines the DCF range; midpoint defines the point estimate. Cells violating Gordon stability (`g ≥ r`) are skipped and reported in the assumption rationale.
+
+**Rejected:**
+- *Hardcoded ±N% factor* (e.g., `point × [0.85, 1.15]` the way Last Round does it). Mechanically simple but unprincipled: the range becomes a vibe rather than a derivation from the model. With a sensitivity grid, the spread is what the same DCF produces under bounded perturbation of its two most defensible-to-perturb inputs, which is exactly what an auditor would want to see in a workpaper.
+- *Wider grid* (e.g., ±2pp / ±1pp). Produces wider ranges that more often swallow the other methods' results, hiding the "DCF is uncertain" signal that low confidence is supposed to convey. The chosen bounds are tight enough that DCF still self-deweights when projections are weak.
+- *Monte Carlo over input distributions.* Most defensible academically, but invites questions about distributional assumptions we can't ground in the available data. A small grid is auditable in a workpaper; a sampled distribution isn't, without a calibration story.
+
+### 6.11 Outlier detection in addition to dispersion flag
+
+**Chose:** Both. Dispersion flags overall method disagreement (`(high − low) / point > 0.5`); the outlier names the method whose point estimate is `>2×` or `<0.5×` the median across applicable methods.
+
+**Rejected:**
+- *Dispersion alone.* Tells the auditor "the methods disagree" but not which one is responsible. With three methods, a single bad input can push dispersion above threshold without the human knowing where to look.
+- *Outlier alone.* Names which method is far from the median but says nothing about whether the disagreement is large enough to matter. A method can sit at 2.1× the median while the absolute spread is still narrow.
+- *A composite "needs review" score.* Considered and rejected as opaque. Two named signals are easier for an auditor to reason about than a blended metric, and they answer different questions (how much vs. where).
+
+### 6.12 Dispersion threshold: global 0.5 vs. configurable
+
+**Chose:** A global, hardcoded threshold of 0.5 on the `needs_more_info` flag.
+
+**Rejected:**
+- *Per-sector calibrated thresholds.* Conceptually correct (SaaS comps cluster tighter than early-stage healthcare comps, so the same dispersion means different things across sectors), but calibration requires sector-level historical valuation data we don't have in the mock universe. Shipping a per-sector knob with fabricated thresholds would be worse than a single honest heuristic. Captured as a future enhancement instead.
+- *Per-request configurable threshold.* Adds a parameter without adding signal: auditors would either leave it at default or set it arbitrarily. Better to keep the contract simple and document where the threshold came from.
+- *No threshold at all, just report the number.* Considered. The flag is useful because it gives auditors a single boolean to triage on, but the raw dispersion is still emitted alongside it for anyone who wants to apply a different cutoff downstream.
 
 ## 7. Non-goals
 
