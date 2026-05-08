@@ -27,6 +27,7 @@ Confidence is per-method, derived from the data: DCF scales with horizon coverag
 DCF reports its range using a 3×3 **sensitivity grid** over the two most consequential inputs (discount rate ± 1pp × terminal growth ± 0.5pp); cells violating Gordon stability are skipped and counted in the assumption rationale.
 
 ## Architecture and request flow
+```
 ┌──────────────────────────────────────────────────────────────┐    ValuationRequest
 │  Presentation                                                │          │
 │  ┌────────────────┐  ┌────────────────┐  ┌────────────────┐  │          ▼
@@ -72,7 +73,7 @@ DCF reports its range using a 3×3 **sensitivity grid** over the two most conseq
 │  │ JSON report writer │    │ Markdown report writer     │    │
 │  └────────────────────┘    └────────────────────────────┘    │
 └──────────────────────────────────────────────────────────────┘
-
+```
 ## Quickstart
 ```bash
 make install                    # uv sync
