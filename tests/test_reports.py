@@ -7,6 +7,8 @@ from pathlib import Path
 from vc_audit.models import (
     Assumption,
     Citation,
+    DCFSensitivityCell,
+    DCFSensitivityGrid,
     MethodResult,
     MethodWeight,
     PortfolioCompany,
@@ -210,6 +212,71 @@ def test_markdown_omits_skipped_methods_section_when_none() -> None:
     valuation = _make_valuation(skipped_methods=[])
     md = to_markdown_str(valuation)
     assert "## Skipped methods" not in md
+
+
+def _make_grid(*, all_valid: bool = True) -> DCFSensitivityGrid:
+    """Build a 3x3 grid for rendering tests. When all_valid=False, the (-1pp, +0.5pp)
+    cell is marked skipped to exercise the "— (skipped)" path."""
+    rates = [Decimal("0.11"), Decimal("0.12"), Decimal("0.13")]
+    growths = [Decimal("0.025"), Decimal("0.03"), Decimal("0.035")]
+    cells: list[DCFSensitivityCell] = []
+    for r in rates:
+        for g in growths:
+            if not all_valid and r == Decimal("0.11") and g == Decimal("0.035"):
+                cells.append(
+                    DCFSensitivityCell(
+                        discount_rate=r,
+                        terminal_growth=g,
+                        enterprise_value=None,
+                        skipped_reason="Gordon stability: g >= r",
+                    )
+                )
+            else:
+                cells.append(
+                    DCFSensitivityCell(
+                        discount_rate=r,
+                        terminal_growth=g,
+                        enterprise_value=Decimal("100") + Decimal(rates.index(r) * 3),
+                    )
+                )
+    return DCFSensitivityGrid(
+        center_discount_rate=Decimal("0.12"),
+        center_terminal_growth=Decimal("0.03"),
+        discount_rate_deltas=[Decimal("-0.01"), Decimal("0"), Decimal("0.01")],
+        terminal_growth_deltas=[Decimal("-0.005"), Decimal("0"), Decimal("0.005")],
+        cells=cells,
+        skipped_count=0 if all_valid else 1,
+    )
+
+
+def test_markdown_renders_dcf_sensitivity_grid_when_present() -> None:
+    """When MethodResult carries a dcf_sensitivity, the markdown shows the table."""
+    valuation = _make_valuation()
+    valuation.method_results[1].dcf_sensitivity = _make_grid()
+    md = to_markdown_str(valuation)
+    assert "Sensitivity grid (EV in $M):" in md
+    # Header advertises perturbed terminal-growth columns at center ±0.5pp.
+    assert "discount rate \\ terminal growth" in md
+    # The center cell value is bolded.
+    assert "**$103.00M**" in md
+    # Row header for the perturbed discount rate (12.00%) is rendered.
+    assert "| 12.00% |" in md
+
+
+def test_markdown_grid_marks_skipped_cells() -> None:
+    """A skipped cell renders as `— (skipped)` rather than a dollar value."""
+    valuation = _make_valuation()
+    valuation.method_results[1].dcf_sensitivity = _make_grid(all_valid=False)
+    md = to_markdown_str(valuation)
+    assert "— (skipped)" in md
+
+
+def test_markdown_omits_grid_block_when_no_sensitivity() -> None:
+    """Methods without dcf_sensitivity (e.g. comps) shouldn't render the grid block."""
+    valuation = _make_valuation()
+    # Default valuation has no dcf_sensitivity on either method result.
+    md = to_markdown_str(valuation)
+    assert "Sensitivity grid (EV in $M):" not in md
 
 
 def test_markdown_table_has_outlier_column() -> None:

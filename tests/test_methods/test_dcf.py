@@ -11,6 +11,7 @@ from vc_audit.methods.dcf import (
 )
 from vc_audit.models import (
     FinancialProjection,
+    MethodResult,
     PortfolioCompany,
     ValuationRequest,
 )
@@ -275,9 +276,10 @@ def test_grid_skips_gordon_violations_when_g_close_to_r() -> None:
     assert "skipped" in grid_assumption.rationale.lower()
     # Independently verify by recomputing — at r=0.04, g=0.038, we expect violations
     # whenever g_p >= r_p; e.g. (dr=-0.01, dg=+0.005): r_p=0.03 < g_p=0.043.
-    _, skipped = _run_sensitivity_grid(
+    cells = _run_sensitivity_grid(
         sorted(req.projections or [], key=lambda p: p.year), r, g, Decimal("0.21")
     )
+    skipped = sum(1 for c in cells if c.enterprise_value is None)
     assert skipped > 0
     assert f"{skipped} cell(s) skipped" in grid_assumption.rationale
 
@@ -297,9 +299,11 @@ def test_grid_falls_back_when_all_cells_skipped() -> None:
     tax = Decimal("0.21")
     projections = [_proj(1, Decimal("100")), _proj(2, Decimal("110"))]
 
-    evs, skipped = _run_sensitivity_grid(projections, r, g, tax)
+    cells = _run_sensitivity_grid(projections, r, g, tax)
+    skipped = sum(1 for c in cells if c.enterprise_value is None)
+    valid_evs = [c.enterprise_value for c in cells if c.enterprise_value is not None]
     assert skipped == 9
-    assert evs == []
+    assert valid_evs == []
 
     # is_applicable correctly refuses this; we bypass it to test the fallback.
     req = _make_request(
@@ -469,3 +473,77 @@ def test_overridden_tax_rate_marked_auditor_supplied() -> None:
     result = DCFMethod().value(req)
     tax_assumption = next(a for a in result.assumptions if a.name == "Tax rate")
     assert "auditor-supplied" in tax_assumption.rationale
+
+
+# ---------- Sensitivity grid surfaced on MethodResult ----------
+
+
+def test_sensitivity_grid_attached_to_result_with_nine_cells() -> None:
+    """The full 3x3 grid is preserved on MethodResult.dcf_sensitivity."""
+    req = _make_request(
+        projections=[_proj(1, Decimal("100")), _proj(2, Decimal("110"))],
+    )
+    result = DCFMethod().value(req)
+    grid = result.dcf_sensitivity
+    assert grid is not None
+    assert len(grid.cells) == 9
+    assert grid.skipped_count == 0
+    assert grid.center_discount_rate == Decimal("0.12")
+    assert grid.center_terminal_growth == Decimal("0.03")
+    # Every cell has an EV (no Gordon violations for these rates).
+    assert all(c.enterprise_value is not None for c in grid.cells)
+    assert all(c.skipped_reason is None for c in grid.cells)
+
+
+def test_sensitivity_grid_center_cell_matches_unperturbed_ev() -> None:
+    """Cell index 4 (row 1, col 1 — the dr=0/dg=0 center) equals _compute_ev at center."""
+    r = Decimal("0.12")
+    g = Decimal("0.03")
+    tax = Decimal("0.21")
+    projections = [_proj(1, Decimal("100")), _proj(2, Decimal("110"))]
+    req = ValuationRequest(
+        company=_company(),
+        projections=projections,
+        discount_rate=r,
+        terminal_growth_rate=g,
+        tax_rate=tax,
+    )
+    result = DCFMethod().value(req)
+    assert result.dcf_sensitivity is not None
+    center = result.dcf_sensitivity.cells[4]
+    assert center.discount_rate == r
+    assert center.terminal_growth == g
+    assert center.enterprise_value is not None
+    assert abs(center.enterprise_value - _compute_ev(projections, r, g, tax)) < _TOL
+
+
+def test_sensitivity_grid_marks_skipped_cells() -> None:
+    """Cells violating Gordon stability carry enterprise_value=None and a reason."""
+    r = Decimal("0.04")
+    g = Decimal("0.038")
+    req = _make_request(
+        projections=[_proj(1, Decimal("100")), _proj(2, Decimal("110"))],
+        discount_rate=r,
+        terminal_growth_rate=g,
+    )
+    result = DCFMethod().value(req)
+    assert result.dcf_sensitivity is not None
+    skipped_cells = [c for c in result.dcf_sensitivity.cells if c.enterprise_value is None]
+    assert len(skipped_cells) == result.dcf_sensitivity.skipped_count
+    assert all(c.skipped_reason is not None for c in skipped_cells)
+    assert all("gordon" in c.skipped_reason.lower() for c in skipped_cells if c.skipped_reason)
+
+
+def test_sensitivity_grid_serializes_to_json() -> None:
+    """Decimal fields round-trip as strings; cells survive model_dump_json."""
+    req = _make_request(
+        projections=[_proj(1, Decimal("100")), _proj(2, Decimal("110"))],
+    )
+    result = DCFMethod().value(req)
+    payload = result.model_dump_json()
+    assert "dcf_sensitivity" in payload
+    assert "cells" in payload
+    # Round-trip back through Pydantic to confirm structure is preserved.
+    rehydrated = MethodResult.model_validate_json(payload)
+    assert rehydrated.dcf_sensitivity is not None
+    assert len(rehydrated.dcf_sensitivity.cells) == 9

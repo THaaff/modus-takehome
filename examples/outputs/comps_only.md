@@ -1,7 +1,7 @@
 # VC Audit Report — Northwind FinTech Inc.
 
 **As-of date:** 2026-03-31
-**Generated:** 2026-05-07T21:30:21.049379+00:00
+**Generated:** 2026-05-08T00:57:08.784874+00:00
 **Sector:** FinTech
 
 ## Headline
@@ -28,7 +28,7 @@ _Money values are in $M (millions of US dollars). Confidence and weights are in 
 
 **Citations:**
 _Upstream data sources this method drew from. Format: `Source: identifier — description (retrieved timestamp)`._
-- **CompsProvider:** mock_universe_v1 — Peer set: MA, PYPL, SQ, V (sector=FinTech, n=4) (retrieved 2026-05-07T21:30:21.049228+00:00)
+- **CompsProvider:** mock_universe_v1 — Peer set: MA, PYPL, SQ, V (sector=FinTech, n=4) (retrieved 2026-05-08T00:57:08.784725+00:00)
 
 ## Skipped methods
 

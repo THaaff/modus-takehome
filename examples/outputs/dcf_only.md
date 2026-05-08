@@ -1,7 +1,7 @@
 # VC Audit Report — Meridian Industrial Holdings
 
 **As-of date:** 2026-03-31
-**Generated:** 2026-05-07T21:30:21.230156+00:00
+**Generated:** 2026-05-08T00:57:08.967412+00:00
 
 ## Headline
 
@@ -31,7 +31,17 @@ _3x3 sensitivity grid (discount_rate +/- 1pp x terminal_growth +/- 0.5pp) over 5
 
 **Citations:**
 _Upstream data sources this method drew from. Format: `Source: identifier — description (retrieved timestamp)`._
-- **ValuationRequest:** projections — DCF on 5 projection years; discount=0.11, terminal_growth=0.025, tax=0.21 (retrieved 2026-05-07T21:30:21.230007+00:00)
+- **ValuationRequest:** projections — DCF on 5 projection years; discount=0.11, terminal_growth=0.025, tax=0.21 (retrieved 2026-05-08T00:57:08.967258+00:00)
+
+**Sensitivity grid (EV in $M):**
+
+_Rows: perturbed discount rate (center ±1pp). Columns: perturbed terminal growth (center ±0.5pp). Center cell (auditor-supplied rates) is **bold**._
+
+| discount rate \ terminal growth | 2.00% | 2.50% | 3.00% |
+|---|---|---|---|
+| 10.00% | $273.44M | $288.24M | $305.15M |
+| 11.00% | $240.55M | **$251.75M** | $264.34M |
+| 12.00% | $214.33M | $223.02M | $232.69M |
 
 ## Skipped methods
 

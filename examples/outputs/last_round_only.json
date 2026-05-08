@@ -43,11 +43,12 @@
         {
           "source": "MarketIndexProvider:mock_nasdaq_v1",
           "description": "NASDAQ 17732.60 on 2024-06-28 -> 17580.12 on 2026-03-31",
-          "retrieved_at": "2026-05-07T21:30:21.766243Z",
+          "retrieved_at": "2026-05-08T00:57:09.483232Z",
           "url": null
         }
       ],
-      "notes": null
+      "notes": null,
+      "dcf_sensitivity": null
     }
   ],
   "skipped_methods": [
@@ -85,5 +86,5 @@
     "method_weights": null,
     "as_of_date": "2026-03-31"
   },
-  "generated_at": "2026-05-07T21:30:21.766427Z"
+  "generated_at": "2026-05-08T00:57:09.483380Z"
 }
