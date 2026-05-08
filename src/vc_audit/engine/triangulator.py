@@ -39,6 +39,12 @@ class Triangulator:
         self._methods = list(methods)
 
     def value(self, request: ValuationRequest) -> TriangulatedValuation:
+        """Run every applicable method and return the synthesized audit artifact.
+
+        Raises `NoApplicableMethodError` if no registered method applies to `request`,
+        and `ValueError` if `request.method_weights` references an unknown method or
+        sums to zero. See the module docstring for the full workflow.
+        """
         applicable: list[ValuationMethod] = []
         skipped: list[SkippedMethod] = []
         for method in self._methods:
@@ -88,6 +94,11 @@ class Triangulator:
 
     @staticmethod
     def _compute_outliers(results: list[MethodResult]) -> list[str]:
+        """Return method names whose point estimate is >2× or <0.5× the median.
+
+        Empty when fewer than 3 methods ran (no median to compare against) or when
+        the median is zero (division would be undefined).
+        """
         if len(results) < 3:
             return []
         sorted_points = sorted(r.point_estimate for r in results)
@@ -108,6 +119,12 @@ class Triangulator:
     def _compute_weights(
         results: list[MethodResult], request: ValuationRequest
     ) -> list[MethodWeight]:
+        """Build the weight per applicable method, honoring auditor overrides.
+
+        With no override, weights normalize raw confidences (equal-weight fallback
+        when every confidence is zero). With an override, supplied weights normalize
+        among themselves; methods omitted from the override get weight zero.
+        """
         applicable_names = {r.method_name for r in results}
 
         if request.method_weights is not None:

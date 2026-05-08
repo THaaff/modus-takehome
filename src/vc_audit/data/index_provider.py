@@ -1,8 +1,8 @@
 """Public market-index price provider interface.
 
 Used by the Last-Round method to compute the index return between the round date and
-the as-of date. Real implementations could pull from FRED, Yahoo, etc.; the mock in
-T3b reads NASDAQ history from a JSON fixture.
+the as-of date. Real implementations could pull from FRED, Yahoo, etc.; the mock
+reads NASDAQ history from a JSON fixture.
 """
 
 import json

@@ -15,6 +15,7 @@ Plain-text status markers ("(FLAG)", "(within tolerance)") are used in place of 
 from decimal import ROUND_HALF_UP, Decimal
 from pathlib import Path
 
+from vc_audit._formatting import format_percent_rate
 from vc_audit.models import (
     Assumption,
     Citation,
@@ -153,7 +154,7 @@ def _sensitivity_grid_block(grid: DCFSensitivityGrid) -> str:
     n_growth = len(grid.terminal_growth_deltas)
     growths = [grid.center_terminal_growth + dg for dg in grid.terminal_growth_deltas]
     rates = [grid.center_discount_rate + dr for dr in grid.discount_rate_deltas]
-    growth_header = " | ".join(_format_rate(g) for g in growths)
+    growth_header = " | ".join(format_percent_rate(g) for g in growths)
     header = f"| discount rate \\ terminal growth | {growth_header} |"
     sep = "|---" * (n_growth + 1) + "|"
     lines = [
@@ -173,13 +174,8 @@ def _sensitivity_grid_block(grid: DCFSensitivityGrid) -> str:
                 0
             ) and grid.terminal_growth_deltas[col_idx] == Decimal(0)
             rendered_cells.append(_format_grid_cell(cell.enterprise_value, is_center))
-        lines.append(f"| {_format_rate(r_rate)} | " + " | ".join(rendered_cells) + " |")
+        lines.append(f"| {format_percent_rate(r_rate)} | " + " | ".join(rendered_cells) + " |")
     return "\n".join(lines)
-
-
-def _format_rate(rate: Decimal) -> str:
-    """Render a rate (e.g., 0.115) as ``11.50%``. Mirrors the DCF method's own format."""
-    return f"{(rate * 100).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP):f}%"
 
 
 def _format_grid_cell(ev: Decimal | None, is_center: bool) -> str:

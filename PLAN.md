@@ -1,8 +1,4 @@
-# VC Audit Tool — Implementation Plan
-
-**Author:** Taylor Haaff
-**Timeline:** 24–48h take-home
-**Status:** Planning complete, ready to execute
+# VC Audit Tool — Design
 
 ---
 
@@ -35,7 +31,6 @@ ASC 820 (the U.S. GAAP fair-value-measurement standard) explicitly encourages cr
 
 - Demonstrates a clean strategy-pattern abstraction (vs. one monolithic method).
 - Forces every method to declare its inputs, confidence, and provenance — which directly serves the "auditable" requirement.
-- Produces a richer, more interesting walkthrough conversation.
 
 ## 3. Architecture
 
@@ -46,7 +41,7 @@ ASC 820 (the U.S. GAAP fair-value-measurement standard) explicitly encourages cr
 │  Presentation                                                │
 │  ┌────────────────┐  ┌────────────────┐  ┌────────────────┐  │
 │  │  CLI (Typer)   │  │ FastAPI server │  │ Streamlit UI   │  │
-│  │                │  │                │  │   (stretch)    │  │
+│  │                │  │                │  │                │  │
 │  └───────┬────────┘  └───────┬────────┘  └───────┬────────┘  │
 │          │                   │                   │           │
 └──────────┼───────────────────┼───────────────────┼───────────┘
@@ -128,7 +123,7 @@ JSON report    Markdown report
 ### 3.3 Repository layout
 
 ```
-modus-takehome/
+vc-audit/
 ├── pyproject.toml
 ├── README.md
 ├── PLAN.md                     ← this file
@@ -166,7 +161,7 @@ modus-takehome/
 │       │   ├── __init__.py
 │       │   └── server.py       ← FastAPI app
 │       ├── cli.py              ← Typer CLI entrypoint
-│       └── ui/                 ← stretch: Streamlit
+│       └── ui/                 ← Streamlit demo
 │           └── app.py
 ├── examples/
 │   ├── inputs/                 ← sample request JSONs
@@ -316,12 +311,12 @@ Methods are stateless and side-effect-free. They receive the full request and re
   2. Discount each year's FCF at `discount_rate`.
   3. Compute terminal value via Gordon growth: `TV = FCF_final × (1 + g) / (r − g)`, discounted.
   4. Sum to get enterprise value.
-  5. Range: `point × [0.80, 1.25]` to reflect projection uncertainty (Phase 3 upgrades this to a 3×3 sensitivity grid — see T15).
+  5. Range: a 3×3 sensitivity grid over discount_rate ± 1pp × terminal_growth ± 0.5pp. Min/max of the valid cells defines the range; midpoint defines the point. Cells violating Gordon stability (g ≥ r) are skipped and counted in the assumption rationale.
 - **Confidence formula:**
   `min(1.0, projection_years / 5) × completeness_ratio`
   where `completeness_ratio` is the fraction of expected fields populated.
 - **Citations:** the projection source (passed through from input).
-- **Assumptions:** discount rate, terminal growth rate, tax rate (and whether default or overridden), FCF formula (no D&A tax shield modeled), ±range factor (or sensitivity grid bounds post-T15).
+- **Assumptions:** discount rate, terminal growth rate, tax rate (and whether default or overridden), FCF formula (no D&A tax shield modeled), sensitivity grid bounds and any skipped cells.
 
 ### 5.5 `Triangulator`
 
@@ -405,107 +400,19 @@ vc-audit example                # write a sample request JSON to stdout
 
 Both CLI and API call into the same `Triangulator` — the presentation layer is paper-thin.
 
-## 6. Ticket map and parallelization
+## 6. Decision log
 
-### 6.1 Ticket list
+These are the alternatives we considered and rejected.
 
-#### Phase 0 — Foundation (sequential, ~2 hr)
-
-| ID | Title | Depends on | Est | Description |
-|----|-------|------------|-----|-------------|
-| T0 | Repo scaffold | — | 30m | `pyproject.toml`, ruff/black/pytest/mypy config, dir tree, README skeleton, Makefile |
-| T1 | Domain models | T0 | 60m | All Pydantic types in §4. Tests for serialization round-trips. |
-| T2 | `ValuationMethod` ABC + provider Protocols | T1 | 30m | Signatures only; no implementations. Locks the contract. |
-
-#### Phase 1 — Parallel build
-
-| ID | Title | Depends on | Est | Notes |
-|----|-------|------------|-----|-------|
-| T3a | `CompsProvider` mock + fixture | T1 | 45m | Hand-curated `comp_universe.json` |
-| T3b | `MarketIndexProvider` mock + fixture | T1 | 45m | Hand-curated `nasdaq_history.json` |
-| T4  | `CompsMethod` impl + unit tests | T2, T3a | 90m | |
-| T5  | `LastRoundMethod` impl + unit tests | T2, T3b | 60m | |
-| T6  | `DCFMethod` impl + unit tests | T2 | 90m | No external provider |
-| T7  | `Triangulator` engine + unit tests | T2 | 75m | Test against fake methods, not real ones |
-| T8  | JSON + Markdown report writers + tests | T1 | 60m | |
-| T9  | Sample input fixtures (4 portfolio companies) | T1 | 30m | One per method shape + one with all data |
-
-#### Phase 2 — Integration
-
-| ID | Title | Depends on | Est | Notes |
-|----|-------|------------|-----|-------|
-| T10 | FastAPI app | T7, T8 | 60m | Endpoints from §5.8 |
-| T11 | Typer CLI | T7, T8 | 45m | Commands from §5.9 |
-| T12 | End-to-end integration tests | T9, T10, T11 | 60m | Real fixtures through CLI + API |
-
-#### Phase 3 — Polish
-
-| ID | Title | Depends on | Est | Notes |
-|----|-------|------------|-----|-------|
-| T15 | DCF sensitivity analysis upgrade | T6 | 75m | 3×3 grid: discount_rate ± 1pp × terminal_growth ± 0.5pp. Run DCFMethod 9 times with perturbed inputs; use min/max as range, midpoint as point. Replaces hardcoded ±20–25%. **Should land before T14** so example outputs reflect the upgrade. |
-| T13 | README (problem, methodology, architecture, run, tradeoffs) | All | 60m | The sales pitch |
-| T14 | Render example outputs into `examples/outputs/` | T11, T15 | 30m | Live artifacts to show |
-| T16 | *(stretch)* Streamlit UI | T10 | 90m | Form → API → rendered MD report |
-| T17 | *(stretch)* Per-method outlier detection in Triangulator | T7 | 45m | Flag any method whose point > 2× median or < 0.5× median across applicable methods. Add `outlier_method_names` to `TriangulatedValuation`; surface in markdown report. |
-
-### 6.2 Dependency graph
-
-```
-T0
- │
- ▼
-T1 ────────────────────────────────────────────────────────┐
- │                                                          │
- ▼                                                          │
-T2 ─┬─► T3a ─► T4 ──┐                                       │
-    │                │                                      │
-    ├─► T3b ─► T5 ──┤                                       │
-    │                ├──► T10 ──┐                           │
-    ├──────► T6 ────┤            │                          │
-    │                │            ├──► T12 ──► T13 ◄────────┤
-    └──────► T7 ────┤            │                          │
-                     │   ┌───────►├──► T14                  │
-              T8 ────┤   │        │                         │
-              T9 ────┴───┴► T11 ──┘                         │
-                                                            │
-                            T16 (stretch, after T10) ───────┤
-                            T17 (stretch, after T7)  ───────┤
-                            T15 (after T6, before T14) ─────┘
-```
-
-### 6.3 Suggested conductor parallelization
-
-After T2 lands, fan out to three concurrent streams:
-
-- **Agent A — Comps vertical:** T3a → T4 → tests
-- **Agent B — Last Round vertical:** T3b → T5 → tests
-- **Agent C — Core engine:** T6 + T7 + T8 (all interface-only deps; no need for real method impls to test the Triangulator)
-
-Reconverge for Phase 2 with a single agent on T10 + T11 + T12 to keep API/CLI shape consistent. T13 (README) and T14 (example outputs) are last and parallelizable.
-
-### 6.4 Total estimated effort
-
-- **Phase 0:** 2 hr (sequential)
-- **Phase 1:** ~9 hr serial / ~3.5 hr parallel (3 streams)
-- **Phase 2:** ~2.75 hr (mostly serial)
-- **Phase 3 core:** ~2.75 hr (T13 + T14 + T15)
-- **Stretch (T16 Streamlit + T17 outliers):** +2.25 hr
-
-**Realistic 48h budget usage: ~11–13 hr of focused work serial; ~7–8 hr with parallelization.** Leaves headroom for polish, debugging, and the stretch UI.
-
-## 7. Decision log
-
-These are the alternatives we considered and rejected. Useful for the walkthrough conversation.
-
-### 7.1 Methodology: triangulation vs. single method
+### 6.1 Methodology: triangulation vs. single method
 
 **Chose:** Triangulator with three methods (Comps + DCF + Last Round).
 
 **Rejected:**
-- *Single method (Comps only).* Would have been faster but limits demonstration of abstraction and produces a less interesting walkthrough. Also misses the chance to model real audit practice where cross-checking is encouraged by ASC 820.
+- *Single method (Comps only).* Faster to build but limits demonstration of the strategy abstraction and misses the chance to model real audit practice, where cross-checking is encouraged by ASC 820.
 - *Two methods (Comps + Last Round, drop DCF).* Considered because DCF is famously a poor fit for early-stage VC. Decided to keep DCF *because in a triangulation it adds an "intrinsic value" perspective independent of public markets*. Its low default confidence (when projections are short or noisy) means it self-deweights — this is itself an interesting design point.
 
-### 7.2 Range synthesis: min/max vs. weighted envelope
+### 6.2 Range synthesis: min/max vs. weighted envelope
 
 **Chose:** min/max across methods, plus a separately reported dispersion metric.
 
@@ -513,60 +420,60 @@ These are the alternatives we considered and rejected. Useful for the walkthroug
 - *Weighted envelope* (e.g., weighted average of low/high). Narrower range, more "math-y", but dishonestly hides model disagreement. Audit prefers conservatism in fair-value ranges.
 - *Statistical confidence interval over a distribution of method outputs.* Overengineered for three data points; would invite questions about distributional assumptions we can't defend.
 
-### 7.3 Auditor weight overrides: yes vs. no
+### 6.3 Auditor weight overrides: yes vs. no
 
 **Chose:** Yes — `method_weights` is an optional field on `ValuationRequest`.
 
 **Rejected:**
 - *No override (data-driven only).* Cleaner but unrealistic. Real auditors apply judgment — sometimes a stale Last Round is still the best signal because the comp set is bad, and they need to encode that. Supporting overrides demonstrates domain awareness with low implementation cost.
 
-### 7.4 Confidence scoring: derived vs. static
+### 6.4 Confidence scoring: derived vs. static
 
 **Chose:** Derived from inputs (per-method formula).
 
 **Rejected:**
-- *Static weights* (e.g., Comps always 0.5, Last Round always 0.3). Simpler but unprincipled and indefensible in interview. Derived confidence lets the system respond to data quality (fresh round → high Last Round confidence; many peers → high Comps confidence).
+- *Static weights* (e.g., Comps always 0.5, Last Round always 0.3). Simpler but unprincipled. Derived confidence lets the system respond to data quality (fresh round → high Last Round confidence; many peers → high Comps confidence).
 
-### 7.5 Stack: Python vs. Node/TS
+### 6.5 Stack: Python vs. Node/TS
 
 **Chose:** Python (FastAPI + Pydantic + Typer + Streamlit).
 
 **Rejected:**
-- *Node/TypeScript.* Type safety is comparable, but Python is the lingua franca for finance/data tooling and interviewers in this space will be more fluent. Pydantic specifically is unmatched for typed I/O models.
+- *Node/TypeScript.* Type safety is comparable, but Python is the lingua franca for finance/data tooling. Pydantic specifically is unmatched for typed I/O models.
 
-### 7.6 Interface: API + CLI + Streamlit vs. CLI only
+### 6.6 Interface: API + CLI + Streamlit vs. CLI only
 
-**Chose:** API + CLI as core; Streamlit as stretch.
+**Chose:** API + CLI as core; Streamlit as the demo surface.
 
 **Rejected:**
-- *CLI only.* The prompt explicitly says "backend service" — leaning into HTTP demonstrates literal compliance. Also, candidate received feedback in a prior round that backend service depth was lacking.
-- *Next.js / React frontend.* Time-prohibitive in 48h and would dilute backend focus. Streamlit gives a credible demo UI with ~90 minutes of work, all in Python.
+- *CLI only.* Leaning into HTTP demonstrates the "backend service" framing and gives reviewers an OpenAPI surface to inspect.
+- *Next.js / React frontend.* Time-prohibitive given the build window and would dilute backend focus. Streamlit gives a credible demo UI in pure Python.
 
-### 7.7 Money type: `Decimal` vs. `float`
+### 6.7 Money type: `Decimal` vs. `float`
 
 **Chose:** `Decimal` everywhere.
 
 **Rejected:**
 - *`float`.* Floating-point error in a financial audit tool is an immediate red flag. `Decimal` is the boring correct choice and shows attention to domain.
 
-### 7.8 Data providers: real APIs vs. mocked fixtures
+### 6.8 Data providers: real APIs vs. mocked fixtures
 
 **Chose:** Mocked JSON fixtures behind interfaces (`Protocol` types).
 
 **Rejected:**
-- *Live Yahoo Finance / FRED / etc. integration.* Adds dependency risk, rate-limit hassle, and credentials management in a 48h take-home. The prompt explicitly endorses mocking. The interface boundary makes a real implementation a future drop-in.
+- *Live Yahoo Finance / FRED / etc. integration.* Adds dependency risk, rate-limit hassle, and credentials management. The interface boundary makes a real implementation a future drop-in.
 
-### 7.9 DCF tax treatment
+### 6.9 DCF tax treatment
 
 **Chose:** Compute FCF as `EBITDA × (1 − tax_rate) − capex − ΔNWC`. Default `tax_rate` = 0.21 (US corporate rate); auditor can override via the request field. Both the rate and whether it was defaulted vs. overridden are emitted as explicit Assumptions in the output.
 
 **Rejected:**
-- *No tax adjustment* (`FCF = EBITDA − capex − ΔNWC`). Simpler but overstates FCF by ~20% at typical tax rates. Defensible only because early-stage co's often have NOLs that shield taxes, but that's not universal — and "we ignored taxes" is the obvious first interview question. Adding the tax adjustment is ~15 minutes of work and preempts the question.
-- *Full textbook unlevered FCF* (`FCF = EBIT × (1 − tax) + D&A − capex − ΔNWC`). Most accurate, but requires carrying D&A in the projection schema and modeling the depreciation tax shield. More inputs to defend, more places to be wrong, marginal accuracy gain for take-home purposes. Our chosen formula is a deliberate middle ground — taxes are present, but D&A complexity is not.
+- *No tax adjustment* (`FCF = EBITDA − capex − ΔNWC`). Simpler but overstates FCF by ~20% at typical tax rates. Defensible only because early-stage co's often have NOLs that shield taxes, but that's not universal — and "we ignored taxes" is the obvious first question to ask of any DCF. Adding the tax adjustment is cheap and preempts it.
+- *Full textbook unlevered FCF* (`FCF = EBIT × (1 − tax) + D&A − capex − ΔNWC`). Most accurate, but requires carrying D&A in the projection schema and modeling the depreciation tax shield. More inputs to defend, more places to be wrong, marginal accuracy gain at this scope. Our chosen formula is a deliberate middle ground — taxes are present, but D&A complexity is not.
 
-## 8. Non-goals
+## 7. Non-goals
 
-Explicitly out of scope. Calling these out prevents scope creep and is itself a useful interview talking point.
+Explicitly out of scope.
 
 - Accurate financial modeling. The prompt says so directly.
 - Peer-similarity scoring beyond exact sector match.
@@ -576,7 +483,7 @@ Explicitly out of scope. Calling these out prevents scope creep and is itself a 
 - Currency conversion. All values assumed USD.
 - Batch processing of multiple companies in one call (trivial extension if asked).
 
-## 9. Risks and mitigations
+## 8. Risks and mitigations
 
 | Risk | Mitigation |
 |------|------------|
@@ -587,21 +494,9 @@ Explicitly out of scope. Calling these out prevents scope creep and is itself a 
 | Pydantic v1 vs. v2 confusion in test deps | Pin v2 in `pyproject.toml`; align all examples |
 | Decimal serialization in JSON | Custom encoder (`str(d)`); document in README |
 
-## 10. Stretch ideas (only if ahead of schedule)
+## 9. Future enhancements
 
-- Streamlit UI (T15) — already in plan as gated stretch.
 - A `/valuations/compare` endpoint that runs the same request through different weight scenarios.
 - A "what-if" CLI flag that shows how the headline number moves as you bump each method's weight ±10%.
 - Persisting reports with a content-addressed hash for true audit immutability.
 
-## 11. Walkthrough talking points
-
-What to emphasize in the 30-min interview:
-
-1. **Why triangulation.** ASC 820 alignment. Real audit practice.
-2. **The interface contract.** Show `ValuationMethod` ABC and explain how everything else falls out from it.
-3. **Confidence as a first-class output.** Each method declares its own confidence from documented signals. The Triangulator does no magic.
-4. **Min/max range + dispersion.** Conservative on purpose. Disagreement is surfaced, not smoothed away.
-5. **Auditor override.** The model is a tool, not the decision-maker.
-6. **Provenance.** Every output points back to its inputs, sources, and assumptions. The JSON report is the audit artifact.
-7. **What we'd do next.** Real data providers, peer-similarity scoring, persistence, multi-currency, scenario analysis.

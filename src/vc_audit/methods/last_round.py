@@ -12,7 +12,6 @@ from typing import ClassVar
 
 from vc_audit.data.index_provider import MarketIndexProvider
 from vc_audit.methods.base import ValuationMethod
-from vc_audit.methods.descriptor import MethodDescriptor
 from vc_audit.models import (
     Assumption,
     Citation,
@@ -41,14 +40,6 @@ class LastRoundMethod(ValuationMethod):
         "reference_index",
     )
 
-    @classmethod
-    def describe(cls) -> MethodDescriptor:
-        return MethodDescriptor(
-            name=cls.name,
-            description=cls.description,
-            required_inputs=list(cls.required_inputs),
-        )
-
     def __init__(self, index_provider: MarketIndexProvider) -> None:
         self._index_provider = index_provider
 
@@ -70,6 +61,7 @@ class LastRoundMethod(ValuationMethod):
         return self._index_can_price(request.reference_index, request.as_of_date)
 
     def inapplicability_reason(self, request: ValuationRequest) -> str:
+        """Pinpoint which input — round data or index coverage — caused the skip."""
         if request.last_post_money_valuation is None:
             return "Last post-money valuation is missing — last_round needs a prior round price."
         if request.last_round_date is None:

@@ -12,7 +12,6 @@ from typing import ClassVar
 
 from vc_audit.data.comps_provider import Comp, CompsProvider
 from vc_audit.methods.base import ValuationMethod
-from vc_audit.methods.descriptor import MethodDescriptor
 from vc_audit.models import (
     Assumption,
     Citation,
@@ -57,14 +56,6 @@ class CompsMethod(ValuationMethod):
     )
     required_inputs: ClassVar[tuple[str, ...]] = ("company.sector", "revenue")
 
-    @classmethod
-    def describe(cls) -> MethodDescriptor:
-        return MethodDescriptor(
-            name=cls.name,
-            description=cls.description,
-            required_inputs=list(cls.required_inputs),
-        )
-
     def __init__(self, comps_provider: CompsProvider) -> None:
         # Stored as the structural Protocol; concrete type is irrelevant past this point.
         self._provider = comps_provider
@@ -82,6 +73,7 @@ class CompsMethod(ValuationMethod):
         return len(peers) >= 1
 
     def inapplicability_reason(self, request: ValuationRequest) -> str:
+        """Pinpoint which input — sector, revenue, or peer set — caused the skip."""
         sector = request.company.sector
         if sector is None:
             return "Company sector is missing — comps requires a sector to match peers."
@@ -95,6 +87,7 @@ class CompsMethod(ValuationMethod):
     # ------------------------------------------------------------------ valuation
 
     def value(self, request: ValuationRequest) -> MethodResult:
+        """Compute the comps-implied valuation. Caller must have checked `is_applicable`."""
         # `is_applicable` guarantees these are set; assert for the type checker.
         sector = request.company.sector
         target_revenue = request.revenue

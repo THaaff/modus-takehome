@@ -1,7 +1,7 @@
 """Tests for CompsMethod: applicability, numeric correctness, confidence, assumptions.
 
-Inline helpers only — no shared conftest fixtures, since other Phase 1 streams may want
-to add their own conftest later without inheriting irrelevant comps wiring.
+Inline helpers only — no shared conftest fixtures, so other test modules can add their
+own conftest later without inheriting irrelevant comps wiring.
 """
 
 from decimal import Decimal
