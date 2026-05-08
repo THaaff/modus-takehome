@@ -1,7 +1,7 @@
 # VC Audit Report — Halcyon Robotics
 
 **As-of date:** 2026-03-31
-**Generated:** 2026-05-07T21:30:21.863534+00:00
+**Generated:** 2026-05-08T00:57:09.580773+00:00
 
 ## Headline
 
@@ -27,7 +27,7 @@ _Money values are in $M (millions of US dollars). Confidence and weights are in 
 
 **Citations:**
 _Upstream data sources this method drew from. Format: `Source: identifier — description (retrieved timestamp)`._
-- **MarketIndexProvider:** mock_nasdaq_v1 — NASDAQ 17732.60 on 2024-06-28 -> 17580.12 on 2026-03-31 (retrieved 2026-05-07T21:30:21.863365+00:00)
+- **MarketIndexProvider:** mock_nasdaq_v1 — NASDAQ 17732.60 on 2024-06-28 -> 17580.12 on 2026-03-31 (retrieved 2026-05-08T00:57:09.580624+00:00)
 
 ## Skipped methods
 

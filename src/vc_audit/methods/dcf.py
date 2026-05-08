@@ -23,6 +23,8 @@ from vc_audit.methods.descriptor import MethodDescriptor
 from vc_audit.models import (
     Assumption,
     Citation,
+    DCFSensitivityCell,
+    DCFSensitivityGrid,
     FinancialProjection,
     MethodResult,
     ValuationRequest,
@@ -76,28 +78,47 @@ def _compute_ev(
     return pv_sum + pv_terminal
 
 
+_GORDON_SKIP_REASON = "Gordon stability: g >= r"
+
+
 def _run_sensitivity_grid(
     projections: list[FinancialProjection],
     r: Decimal,
     g: Decimal,
     tax: Decimal,
-) -> tuple[list[Decimal], int]:
-    """Compute the 3x3 grid of EVs, skipping cells that violate Gordon stability.
+) -> list[DCFSensitivityCell]:
+    """Compute the full 3x3 grid as typed cells.
 
-    Returns ``(evs, skipped)``: the list of valid-cell enterprise values and the
-    count of cells skipped because the perturbed ``g'`` was >= the perturbed ``r'``.
+    Cells are emitted in row-major order: outer loop over discount-rate deltas,
+    inner over terminal-growth deltas. Cells that violate Gordon stability
+    (``g_p >= r_p``) are returned with ``enterprise_value=None`` and a
+    ``skipped_reason``, so callers can preserve the full grid shape rather than
+    just the surviving values.
     """
-    evs: list[Decimal] = []
-    skipped = 0
+    cells: list[DCFSensitivityCell] = []
     for dr in _DISCOUNT_RATE_DELTAS:
         for dg in _TERMINAL_GROWTH_DELTAS:
             r_p = r + dr
             g_p = g + dg
             if g_p >= r_p:
-                skipped += 1
+                cells.append(
+                    DCFSensitivityCell(
+                        discount_rate=r_p,
+                        terminal_growth=g_p,
+                        enterprise_value=None,
+                        skipped_reason=_GORDON_SKIP_REASON,
+                    )
+                )
                 continue
-            evs.append(_compute_ev(projections, r_p, g_p, tax))
-    return evs, skipped
+            cells.append(
+                DCFSensitivityCell(
+                    discount_rate=r_p,
+                    terminal_growth=g_p,
+                    enterprise_value=_compute_ev(projections, r_p, g_p, tax),
+                    skipped_reason=None,
+                )
+            )
+    return cells
 
 
 class DCFMethod(ValuationMethod):
@@ -167,12 +188,15 @@ class DCFMethod(ValuationMethod):
         tax = request.tax_rate
         n_years = len(projections)
 
-        evs, skipped = _run_sensitivity_grid(projections, r, g, tax)
+        cells = _run_sensitivity_grid(projections, r, g, tax)
+        evs = [c.enterprise_value for c in cells if c.enterprise_value is not None]
+        skipped = sum(1 for c in cells if c.enterprise_value is None)
 
         if not evs:
             # Defensive fallback: every grid cell hit Gordon instability. is_applicable
             # already enforces g < r at center, so this only fires for adversarial
-            # inputs that bypass the gate.
+            # inputs that bypass the gate. We still emit the (all-skipped) grid for
+            # traceability so reviewers can see *why* every cell was rejected.
             center = _compute_ev(projections, r, g, tax)
             point = low = high = center
             grid_assumption = Assumption(
@@ -197,6 +221,15 @@ class DCFMethod(ValuationMethod):
                     "(Gordon stability: g >= r)."
                 ),
             )
+
+        sensitivity_grid = DCFSensitivityGrid(
+            center_discount_rate=r,
+            center_terminal_growth=g,
+            discount_rate_deltas=list(_DISCOUNT_RATE_DELTAS),
+            terminal_growth_deltas=list(_TERMINAL_GROWTH_DELTAS),
+            cells=cells,
+            skipped_count=skipped,
+        )
 
         # Confidence — horizon coverage × completeness.
         years_factor = min(Decimal(1), Decimal(n_years) / _CONFIDENCE_SATURATION_YEARS)
@@ -230,6 +263,7 @@ class DCFMethod(ValuationMethod):
                 f"+/- 0.5pp) over {n_years} projection years; range = min/max "
                 f"across {valid_cells_for_notes} valid cells, point = midpoint."
             ),
+            dcf_sensitivity=sensitivity_grid,
         )
 
     @staticmethod

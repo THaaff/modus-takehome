@@ -18,6 +18,7 @@ from pathlib import Path
 from vc_audit.models import (
     Assumption,
     Citation,
+    DCFSensitivityGrid,
     MethodResult,
     MethodWeight,
     SkippedMethod,
@@ -136,7 +137,56 @@ def _method_detail(result: MethodResult) -> str:
         lines.extend(_citation_line(c) for c in result.citations)
     else:
         lines.append("- (none)")
+    if result.dcf_sensitivity is not None:
+        lines.append("")
+        lines.append(_sensitivity_grid_block(result.dcf_sensitivity))
     return "\n".join(lines)
+
+
+def _sensitivity_grid_block(grid: DCFSensitivityGrid) -> str:
+    """Render the 3x3 grid as a markdown table.
+
+    Rows are perturbed discount rates; columns are perturbed terminal-growth rates.
+    The center cell (dr=0, dg=0) is bolded so reviewers can read the as-supplied
+    EV at a glance. Skipped cells render as ``— (skipped)``.
+    """
+    n_growth = len(grid.terminal_growth_deltas)
+    growths = [grid.center_terminal_growth + dg for dg in grid.terminal_growth_deltas]
+    rates = [grid.center_discount_rate + dr for dr in grid.discount_rate_deltas]
+    growth_header = " | ".join(_format_rate(g) for g in growths)
+    header = f"| discount rate \\ terminal growth | {growth_header} |"
+    sep = "|---" * (n_growth + 1) + "|"
+    lines = [
+        "**Sensitivity grid (EV in $M):**",
+        "",
+        "_Rows: perturbed discount rate (center ±1pp). Columns: perturbed terminal "
+        "growth (center ±0.5pp). Center cell (auditor-supplied rates) is **bold**._",
+        "",
+        header,
+        sep,
+    ]
+    for row_idx, r_rate in enumerate(rates):
+        cells_in_row = grid.cells[row_idx * n_growth : (row_idx + 1) * n_growth]
+        rendered_cells: list[str] = []
+        for col_idx, cell in enumerate(cells_in_row):
+            is_center = grid.discount_rate_deltas[row_idx] == Decimal(
+                0
+            ) and grid.terminal_growth_deltas[col_idx] == Decimal(0)
+            rendered_cells.append(_format_grid_cell(cell.enterprise_value, is_center))
+        lines.append(f"| {_format_rate(r_rate)} | " + " | ".join(rendered_cells) + " |")
+    return "\n".join(lines)
+
+
+def _format_rate(rate: Decimal) -> str:
+    """Render a rate (e.g., 0.115) as ``11.50%``. Mirrors the DCF method's own format."""
+    return f"{(rate * 100).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP):f}%"
+
+
+def _format_grid_cell(ev: Decimal | None, is_center: bool) -> str:
+    if ev is None:
+        return "— (skipped)"
+    rendered = _currency(ev)
+    return f"**{rendered}**" if is_center else rendered
 
 
 def _assumption_line(a: Assumption) -> str:

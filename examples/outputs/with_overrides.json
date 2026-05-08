@@ -45,11 +45,12 @@
         {
           "source": "CompsProvider:mock_universe_v1",
           "description": "Peer set: CRM, DDOG, NOW, WDAY (sector=SaaS, n=4)",
-          "retrieved_at": "2026-05-07T21:30:21.957890Z",
+          "retrieved_at": "2026-05-08T00:57:09.677592Z",
           "url": null
         }
       ],
-      "notes": null
+      "notes": null,
+      "dcf_sensitivity": null
     },
     {
       "method_name": "last_round",
@@ -83,11 +84,12 @@
         {
           "source": "MarketIndexProvider:mock_nasdaq_v1",
           "description": "NASDAQ 13219.32 on 2023-09-29 -> 17580.12 on 2026-03-31",
-          "retrieved_at": "2026-05-07T21:30:21.958057Z",
+          "retrieved_at": "2026-05-08T00:57:09.677738Z",
           "url": null
         }
       ],
-      "notes": null
+      "notes": null,
+      "dcf_sensitivity": null
     },
     {
       "method_name": "dcf",
@@ -131,11 +133,82 @@
         {
           "source": "ValuationRequest:projections",
           "description": "DCF on 5 projection years; discount=0.12, terminal_growth=0.03, tax=0.21",
-          "retrieved_at": "2026-05-07T21:30:21.958111Z",
+          "retrieved_at": "2026-05-08T00:57:09.677804Z",
           "url": null
         }
       ],
-      "notes": "3x3 sensitivity grid (discount_rate +/- 1pp x terminal_growth +/- 0.5pp) over 5 projection years; range = min/max across 9 valid cells, point = midpoint."
+      "notes": "3x3 sensitivity grid (discount_rate +/- 1pp x terminal_growth +/- 0.5pp) over 5 projection years; range = min/max across 9 valid cells, point = midpoint.",
+      "dcf_sensitivity": {
+        "center_discount_rate": "0.12",
+        "center_terminal_growth": "0.03",
+        "discount_rate_deltas": [
+          "-0.01",
+          "0",
+          "0.01"
+        ],
+        "terminal_growth_deltas": [
+          "-0.005",
+          "0",
+          "0.005"
+        ],
+        "cells": [
+          {
+            "discount_rate": "0.11",
+            "terminal_growth": "0.025",
+            "enterprise_value": "964.23",
+            "skipped_reason": null
+          },
+          {
+            "discount_rate": "0.11",
+            "terminal_growth": "0.03",
+            "enterprise_value": "1012.62",
+            "skipped_reason": null
+          },
+          {
+            "discount_rate": "0.11",
+            "terminal_growth": "0.035",
+            "enterprise_value": "1067.46",
+            "skipped_reason": null
+          },
+          {
+            "discount_rate": "0.12",
+            "terminal_growth": "0.025",
+            "enterprise_value": "853.81",
+            "skipped_reason": null
+          },
+          {
+            "discount_rate": "0.12",
+            "terminal_growth": "0.03",
+            "enterprise_value": "890.93",
+            "skipped_reason": null
+          },
+          {
+            "discount_rate": "0.12",
+            "terminal_growth": "0.035",
+            "enterprise_value": "932.43",
+            "skipped_reason": null
+          },
+          {
+            "discount_rate": "0.13",
+            "terminal_growth": "0.025",
+            "enterprise_value": "764.68",
+            "skipped_reason": null
+          },
+          {
+            "discount_rate": "0.13",
+            "terminal_growth": "0.03",
+            "enterprise_value": "793.85",
+            "skipped_reason": null
+          },
+          {
+            "discount_rate": "0.13",
+            "terminal_growth": "0.035",
+            "enterprise_value": "826.10",
+            "skipped_reason": null
+          }
+        ],
+        "skipped_count": 0
+      }
     }
   ],
   "skipped_methods": [],
@@ -216,5 +289,5 @@
     },
     "as_of_date": "2026-03-31"
   },
-  "generated_at": "2026-05-07T21:30:21.958132Z"
+  "generated_at": "2026-05-08T00:57:09.677823Z"
 }

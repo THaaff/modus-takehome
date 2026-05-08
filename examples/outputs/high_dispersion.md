@@ -1,7 +1,7 @@
 # VC Audit Report — Lumina Analytics
 
 **As-of date:** 2026-03-31
-**Generated:** 2026-05-07T21:30:21.668328+00:00
+**Generated:** 2026-05-08T00:57:09.378698+00:00
 **Sector:** SaaS
 
 ## Headline
@@ -31,7 +31,7 @@ _Money values are in $M (millions of US dollars). Confidence and weights are in 
 
 **Citations:**
 _Upstream data sources this method drew from. Format: `Source: identifier — description (retrieved timestamp)`._
-- **CompsProvider:** mock_universe_v1 — Peer set: CRM, DDOG, NOW, WDAY (sector=SaaS, n=4) (retrieved 2026-05-07T21:30:21.668098+00:00)
+- **CompsProvider:** mock_universe_v1 — Peer set: CRM, DDOG, NOW, WDAY (sector=SaaS, n=4) (retrieved 2026-05-08T00:57:09.378423+00:00)
 
 ### last_round
 
@@ -43,7 +43,7 @@ _Upstream data sources this method drew from. Format: `Source: identifier — de
 
 **Citations:**
 _Upstream data sources this method drew from. Format: `Source: identifier — description (retrieved timestamp)`._
-- **MarketIndexProvider:** mock_nasdaq_v1 — NASDAQ 15164.01 on 2024-01-31 -> 17580.12 on 2026-03-31 (retrieved 2026-05-07T21:30:21.668257+00:00)
+- **MarketIndexProvider:** mock_nasdaq_v1 — NASDAQ 15164.01 on 2024-01-31 -> 17580.12 on 2026-03-31 (retrieved 2026-05-08T00:57:09.378587+00:00)
 
 ### dcf
 
@@ -59,7 +59,17 @@ _3x3 sensitivity grid (discount_rate +/- 1pp x terminal_growth +/- 0.5pp) over 5
 
 **Citations:**
 _Upstream data sources this method drew from. Format: `Source: identifier — description (retrieved timestamp)`._
-- **ValuationRequest:** projections — DCF on 5 projection years; discount=0.10, terminal_growth=0.03, tax=0.21 (retrieved 2026-05-07T21:30:21.668311+00:00)
+- **ValuationRequest:** projections — DCF on 5 projection years; discount=0.10, terminal_growth=0.03, tax=0.21 (retrieved 2026-05-08T00:57:09.378675+00:00)
+
+**Sensitivity grid (EV in $M):**
+
+_Rows: perturbed discount rate (center ±1pp). Columns: perturbed terminal growth (center ±0.5pp). Center cell (auditor-supplied rates) is **bold**._
+
+| discount rate \ terminal growth | 2.50% | 3.00% | 3.50% |
+|---|---|---|---|
+| 9.00% | $1,019.25M | $1,098.08M | $1,191.25M |
+| 10.00% | $861.46M | **$917.93M** | $983.07M |
+| 11.00% | $741.52M | $783.56M | $831.21M |
 
 ## Request (echoed)
 

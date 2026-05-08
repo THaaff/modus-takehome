@@ -43,11 +43,12 @@
         {
           "source": "CompsProvider:mock_universe_v1",
           "description": "Peer set: MA, PYPL, SQ, V (sector=FinTech, n=4)",
-          "retrieved_at": "2026-05-07T21:30:20.962087Z",
+          "retrieved_at": "2026-05-08T00:57:08.698120Z",
           "url": null
         }
       ],
-      "notes": null
+      "notes": null,
+      "dcf_sensitivity": null
     }
   ],
   "skipped_methods": [
@@ -85,5 +86,5 @@
     "method_weights": null,
     "as_of_date": "2026-03-31"
   },
-  "generated_at": "2026-05-07T21:30:20.962234Z"
+  "generated_at": "2026-05-08T00:57:08.698278Z"
 }
