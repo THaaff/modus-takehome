@@ -26,22 +26,54 @@ Confidence is per-method, derived from the data: DCF scales with horizon coverag
 
 DCF reports its range using a 3×3 **sensitivity grid** over the two most consequential inputs (discount rate ± 1pp × terminal growth ± 0.5pp); cells violating Gordon stability are skipped and counted in the assumption rationale.
 
-## Architecture
+## Architecture and request flow
+┌──────────────────────────────────────────────────────────────┐    ValuationRequest
+│  Presentation                                                │          │
+│  ┌────────────────┐  ┌────────────────┐  ┌────────────────┐  │          ▼
+│  │  CLI (Typer)   │  │ FastAPI server │  │ Streamlit UI   │  │    ┌──────────────┐
+│  └───────┬────────┘  └───────┬────────┘  └───────┬────────┘  │    │ Triangulator │── for each registered method:
+│          │                   │                   │           │    └──────┬───────┘     ├─ method.is_applicable(request)?
+└──────────┼───────────────────┼───────────────────┼───────────┘           │             ├─ if yes, method.value(request) → MethodResult
+           │                   │                   │                       │             └─ if no,  SkippedMethod(name, reason) [audit log]
+┌──────────▼───────────────────▼───────────────────▼───────────┐           │
+│  Engine                                                      │           │ MethodResult[]   (+ SkippedMethod[] carried forward)
+│  ┌────────────────────────────────────────────────────────┐  │           ▼
+│  │                    Triangulator                        │  │    ┌────────────────────────┐
+│  │  • partitions methods into applicable / skipped        │  │    │ Compute weights:       │
+│  │    (skipped methods carry a reason for the audit log)  │  │    │  raw_confidence_i      │
+│  │  • collects MethodResult[] from the applicable subset  │  │    │  / Σ raw_confidence    │
+│  │  • normalizes confidences → weights                    │  │    │ (or override if given) │
+│  │  • applies auditor weight overrides if supplied        │  │    └──────────┬─────────────┘
+│  │  • computes point (weighted avg), range (min/max),     │  │               │
+│  │    dispersion ((high-low)/point)                       │  │               ▼
+│  │  • detects per-method outliers (>2× or <0.5× median)   │  │    ┌─────────────────────────────────────┐
+│  └────────────────────────────────────────────────────────┘  │    │ Synthesize:                         │
+└──────────────────────────────┬───────────────────────────────┘    │  point    = Σ w_i × point_i         │
+                               │                                    │  low      = min(low_i)              │
+┌──────────────────────────────▼───────────────────────────────┐    │  high     = max(high_i)             │
+│  Methods (strategy pattern, ValuationMethod ABC)             │    │  disp     = (high − low) / point    │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐        │    │  outliers = methods >2× or <0.5×    │
+│  │ CompsMethod  │  │ DCFMethod    │  │ LastRound    │        │    │             median across results   │
+│  │              │  │ (3×3 grid)   │  │ Method       │        │    └──────────┬──────────────────────────┘
+│  └──────┬───────┘  └──────────────┘  └──────┬───────┘        │               │
+└─────────┼─────────────────────────────────── ┼───────────────┘               ▼
+          │                                    │                        TriangulatedValuation
+┌─────────▼────────────────────────────────────▼───────────────┐        (includes method_results, skipped_methods,
+│  Data providers (Protocol + mock impls)                      │         weights, dispersion, outliers, echoed request)
+│  ┌──────────────────┐         ┌────────────────────────┐     │                   │
+│  │ CompsProvider    │         │ MarketIndexProvider    │     │           ┌───────┴────────┐
+│  │ (mock universe)  │         │ (mock NASDAQ history)  │     │           ▼                ▼
+│  └──────────────────┘         └────────────────────────┘     │       JSON report    Markdown report
+└──────────────────────────────────────────────────────────────┘
 
-```
-Presentation (CLI · FastAPI · Streamlit)
-        │
-   Engine (Triangulator + per-method weights + outlier detection)
-        │
-   Methods (Comps · DCF · LastRound)  ← strategy pattern, Protocol-based
-        │
-   Data providers (Comps universe · Market index)  ← mock impls; drop-in real ones
-        │
-   Reports (JSON · Markdown)
-```
+┌──────────────────────────────────────────────────────────────┐
+│  Output                                                      │
+│  ┌────────────────────┐    ┌────────────────────────────┐    │
+│  │ JSON report writer │    │ Markdown report writer     │    │
+│  └────────────────────┘    └────────────────────────────┘    │
+└──────────────────────────────────────────────────────────────┘
 
 ## Quickstart
-
 ```bash
 make install                    # uv sync
 make check                      # ruff + format-check + mypy --strict + pytest (169 tests)
